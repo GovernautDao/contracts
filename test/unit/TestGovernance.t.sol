@@ -10,4 +10,6 @@ contract TestGovernance is Test {
     function setUp() public {
         gov = new Governance();
     }
+
+    function testDefault() public { }
 }

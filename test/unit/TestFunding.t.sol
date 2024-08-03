@@ -10,4 +10,6 @@ contract TestFunding is Test {
     function setup() public {
         funding = new Funding();
     }
+
+    function testDefault() public { }
 }

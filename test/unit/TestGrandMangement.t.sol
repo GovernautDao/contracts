@@ -10,4 +10,6 @@ contract TestGrantManagement is Test {
     function setUp() public {
         gManagement = new GrantManagement();
     }
+
+    function testDefault() public { }
 }
