@@ -1,66 +1,52 @@
-## Foundry
+# Governaut Contracts Repository
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Overview
 
-Foundry consists of:
+Governaut is a decentralized identity and governance dashboard that integrates decentralized identity verification, governance tools, and attestation systems. This repository contains the smart contracts that form the backbone of the Governaut platform, facilitating governance interactions, identity verification, and community project funding through integration with Celo's onchain mechanisms.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Table of Contents
 
-## Documentation
+- [Governaut Contracts Repository](#governaut-contracts-repository)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+  - [Contracts Overview](#contracts-overview)
+    - [Coming Soon](#coming-soon)
+  - [License](#license)
 
-https://book.getfoundry.sh/
+## Getting Started
 
-## Usage
+To get a copy of the project up and running on your local machine for development and testing purposes, follow these steps.
 
-### Build
+### Prerequisites
 
-```shell
-$ forge build
-```
+Ensure you have the following prerequisites installed:
 
-### Test
+- Solidity compiler (solc 0.8.24)
+- Foundry for development and testing
+- Anvil or another local blockchain for testing
 
-```shell
-$ forge test
-```
+### Installation
 
-### Format
+Clone the repository to your local machine:
 
-```shell
-$ forge fmt
-```
+`git clone https://github.com/GovernautDao/contracts.git`
 
-### Gas Snapshots
+Install dependencies:
 
-```shell
-$ forge snapshot
-```
+`forge install`
 
-### Anvil
+Compile the contracts:
 
-```shell
-$ anvil
-```
+`forge build`
 
-### Deploy
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+## Contracts Overview
 
-### Cast
+### Coming Soon
 
-```shell
-$ cast <subcommand>
-```
+## License
 
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+Distributed under the MIT License.
