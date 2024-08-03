@@ -2,6 +2,8 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+solc = "0.8.24"
+remappings = ["@openzeppelin/contracts=lib/openzeppelin-contracts/contracts/"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
@@ -28,3 +30,12 @@ number_underscore = "thousands"
 quote_style = "double"
 tab_width = 4
 wrap_comments = true
+
+[etherscan]
+# EXAMPLE:
+# sepolia = { key = "6DGM59G85MGI91CSSR44ASZ5NW6ZDDWMK4" }
+sepolia = { key = "${API_KEY_SEPOLIA_ETHERSCAN}" }
+optimism = { key = "${API_KEY_OPTIMISTIC_ETHERSCAN}" }
+mode = { key = "${API_KEY_MODESCAN}" }
+base = { key = "${API_KEY_BASESCAN}" }
+#Add more keys here
