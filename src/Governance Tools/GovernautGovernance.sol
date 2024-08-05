@@ -14,10 +14,10 @@ import { TimelockController } from "@openzeppelin/contracts/governance/TimelockC
 import { IdentityManager } from "../Identity Management/IdentityManager.sol";
 
 /**
- * @title Governaut Governance
+ * @title GovernautGovernance
  * @author Governaut
- * @notice This contract integrates OpenZeppelin's governance components to manage proposals, voting, and timelocked
- * operations within the Governaut ecosystem.
+ * @notice This contract implements a governance system using OpenZeppelin's Governor contracts.
+ * It integrates with an Identity Manager to verify the identities of those proposing actions.
  */
 contract GovernautGovernance is
     Governor,
@@ -38,10 +38,10 @@ contract GovernautGovernance is
     // }
 
     /**
-     * @notice Constructs the GovernautGovernance contract.
-     * @param _token Address of the token used for voting rights.
-     * @param _timelock Address of the TimelockController contract.
-     * @param _identityManagerAddress Address of the IdentityManager contract.
+     * @param _token Address of the token used for voting.
+     * @param _timelock Address of the timelock controller.
+     * @param _identityManagerAddress Address of the Identity Manager contract.
+     * @dev Initializes the Governaut Governance contract with the given parameters.
      */
     constructor(
         IVotes _token,
@@ -57,15 +57,40 @@ contract GovernautGovernance is
         identityManager = IdentityManager(_identityManagerAddress);
     }
 
+    /**
+     * @param targets Array of addresses to which the proposals will be sent.
+     * @param values Array of amounts of tokens to send along with the proposals.
+     * @param calldatas Array of calldata to pass along with the proposals.
+     * @param description Description of the proposal.
+     * @param proposer Address of the proposer.
+     * @return Proposal ID.
+     * @dev Calls the `_propose` function to create a new proposal.
+     */
+    function propose(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        string memory description,
+        address proposer
+    )
+        external //onlyVerifiedIdentity
+        returns (uint256)
+    {
+        return _propose(targets, values, calldatas, description, proposer);
+    }
+
     // Overrides required by Solidity for integrating various extensions
+    /// @dev Returns the minimum time between consecutive votes.
     function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.votingDelay();
     }
 
+    /// @dev Returns the duration after which a vote becomes eligible for execution.
     function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.votingPeriod();
     }
 
+    /// @dev Calculates the quorum based on the current block number.
     function quorum(uint256 blockNumber)
         public
         view
@@ -75,6 +100,7 @@ contract GovernautGovernance is
         return super.quorum(blockNumber);
     }
 
+    /// @dev Returns the current state of a proposal.
     function state(uint256 proposalId)
         public
         view
@@ -84,6 +110,7 @@ contract GovernautGovernance is
         return super.state(proposalId);
     }
 
+    /// @dev Determines whether a proposal needs to be queued before execution.
     function proposalNeedsQueuing(uint256 proposalId)
         public
         view
@@ -93,17 +120,17 @@ contract GovernautGovernance is
         return super.proposalNeedsQueuing(proposalId);
     }
 
+    /// @dev Returns the minimum number of votes required to submit a proposal.
     function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
         return super.proposalThreshold();
     }
 
     /**
-     * @dev Internal function to propose new actions.
-     * @param targets Addresses of the contracts to call.
-     * @param values Amounts of wei to send to the targets.
-     * @param calldatas Calldata to pass to the target contracts.
-     * @param description Description of the proposal.
-     * @param proposer Address of the proposer.
+     * @dev Creates a new proposal with the given details.
+     * @param targets Addresses to which the proposals will be sent.
+     * @param values Amounts of tokens to send along with the proposals.
+     * @param calldatas Calldata to pass along with the proposals.
+     * @param description Hash of the proposal description.
      * @return Proposal ID.
      */
     function _propose(
@@ -121,11 +148,11 @@ contract GovernautGovernance is
     }
 
     /**
-     * @dev Internal function to queue operations for execution after a timelock period.
-     * @param proposalId ID of the proposal to queue.
-     * @param targets Addresses of the contracts to call.
-     * @param values Amounts of wei to send to the targets.
-     * @param calldatas Calldata to pass to the target contracts.
+     * @dev Queues operations defined in a proposal for execution.
+     * @param proposalId ID of the proposal.
+     * @param targets Addresses to which the operations will be sent.
+     * @param values Amounts of tokens to send along with the operations.
+     * @param calldatas Calldata to pass along with the operations.
      * @param descriptionHash Hash of the proposal description.
      * @return Queue ID.
      */
@@ -144,11 +171,11 @@ contract GovernautGovernance is
     }
 
     /**
-     * @dev Internal function to execute queued operations immediately.
-     * @param proposalId ID of the proposal to execute.
-     * @param targets Addresses of the contracts to call.
-     * @param values Amounts of wei to send to the targets.
-     * @param calldatas Calldata to pass to the target contracts.
+     * @dev Executes operations defined in a proposal.
+     * @param proposalId ID of the proposal.
+     * @param targets Addresses to which the operations will be sent.
+     * @param values Amounts of tokens to send along with the operations.
+     * @param calldatas Calldata to pass along with the operations.
      * @param descriptionHash Hash of the proposal description.
      */
     function _executeOperations(
@@ -165,10 +192,10 @@ contract GovernautGovernance is
     }
 
     /**
-     * @dev Internal function to cancel queued operations.
-     * @param targets Addresses of the contracts to call.
-     * @param values Amounts of wei to send to the targets.
-     * @param calldatas Calldata to pass to the target contracts.
+     * @dev Cancels operations defined in a proposal.
+     * @param targets Addresses to which the operations will be sent.
+     * @param values Amounts of tokens to send along with the operations.
+     * @param calldatas Calldata to pass along with the operations.
      * @param descriptionHash Hash of the proposal description.
      * @return Cancellation transaction hash.
      */
