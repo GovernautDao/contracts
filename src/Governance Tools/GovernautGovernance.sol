@@ -31,6 +31,9 @@ contract GovernautGovernance is
     /// @dev Immutable reference to the IdentityManager contract responsible for verifying identities.
     IdentityManager immutable identityManager;
 
+    /// @dev Event emitted when a new proposal is created.
+    event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string indexed description);
+
     /// @dev Modifier to ensure that only verified identities can execute certain functions.
     // modifier onlyVerifiedIdentity() {
     //     require(identityManager.isVerified(msg.sender), "Caller is not a verified identity");
@@ -57,6 +60,9 @@ contract GovernautGovernance is
         identityManager = IdentityManager(_identityManagerAddress);
     }
 
+    ///////////////////////////////////////////////////////////////////////////////
+    ///                        External Functions                              ///
+    //////////////////////////////////////////////////////////////////////////////
     /**
      * @param targets Array of addresses to which the proposals will be sent.
      * @param values Array of amounts of tokens to send along with the proposals.
@@ -76,55 +82,14 @@ contract GovernautGovernance is
         external //onlyVerifiedIdentity
         returns (uint256)
     {
-        return _propose(targets, values, calldatas, description, proposer);
+        uint256 proposalId = _propose(targets, values, calldatas, description, proposer);
+        emit ProposalCreated(proposalId, proposer, description);
+        return proposalId;
     }
 
-    // Overrides required by Solidity for integrating various extensions
-    /// @dev Returns the minimum time between consecutive votes.
-    function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
-        return super.votingDelay();
-    }
-
-    /// @dev Returns the duration after which a vote becomes eligible for execution.
-    function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
-        return super.votingPeriod();
-    }
-
-    /// @dev Calculates the quorum based on the current block number.
-    function quorum(uint256 blockNumber)
-        public
-        view
-        override(Governor, GovernorVotesQuorumFraction)
-        returns (uint256)
-    {
-        return super.quorum(blockNumber);
-    }
-
-    /// @dev Returns the current state of a proposal.
-    function state(uint256 proposalId)
-        public
-        view
-        override(Governor, GovernorTimelockControl)
-        returns (ProposalState)
-    {
-        return super.state(proposalId);
-    }
-
-    /// @dev Determines whether a proposal needs to be queued before execution.
-    function proposalNeedsQueuing(uint256 proposalId)
-        public
-        view
-        override(Governor, GovernorTimelockControl)
-        returns (bool)
-    {
-        return super.proposalNeedsQueuing(proposalId);
-    }
-
-    /// @dev Returns the minimum number of votes required to submit a proposal.
-    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
-        return super.proposalThreshold();
-    }
-
+    ///////////////////////////////////////////////////////////////////////////////
+    ///                        Internal Functions                              ///
+    //////////////////////////////////////////////////////////////////////////////
     /**
      * @dev Creates a new proposal with the given details.
      * @param targets Addresses to which the proposals will be sent.
@@ -212,11 +177,64 @@ contract GovernautGovernance is
         return super._cancel(targets, values, calldatas, descriptionHash);
     }
 
+    ///////////////////////////////////////////////////////////////////////////////
+    ///                        Internal View                                   ///
+    //////////////////////////////////////////////////////////////////////////////
     /**
      * @dev Returns the executor address for proposals.
      * @return Executor address.
      */
     function _executor() internal view override(Governor, GovernorTimelockControl) returns (address) {
         return super._executor();
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    ///                        Public/External View                            ///
+    //////////////////////////////////////////////////////////////////////////////
+
+    // Overrides required by Solidity for integrating various extensions
+    /// @dev Returns the minimum time between consecutive votes.
+    function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.votingDelay();
+    }
+
+    /// @dev Returns the duration after which a vote becomes eligible for execution.
+    function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.votingPeriod();
+    }
+
+    /// @dev Calculates the quorum based on the current block number.
+    function quorum(uint256 blockNumber)
+        public
+        view
+        override(Governor, GovernorVotesQuorumFraction)
+        returns (uint256)
+    {
+        return super.quorum(blockNumber);
+    }
+
+    /// @dev Returns the current state of a proposal.
+    function state(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (ProposalState)
+    {
+        return super.state(proposalId);
+    }
+
+    /// @dev Determines whether a proposal needs to be queued before execution.
+    function proposalNeedsQueuing(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (bool)
+    {
+        return super.proposalNeedsQueuing(proposalId);
+    }
+
+    /// @dev Returns the minimum number of votes required to submit a proposal.
+    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.proposalThreshold();
     }
 }

@@ -7,8 +7,12 @@ import { GovernautGovernance } from "../../src/Governance Tools/GovernautGoverna
 contract TestGovernautGovernance is Test {
     GovernautGovernance governautGovernance;
 
+    address TOKEN = makeAddr("IVotes Token");
+    address TIMELOCKCONTROLLER = makeAddr("TimelockController");
+    address IDENTITYMANAGER = makeAddr("IdentityManager");
+
     function setUp() public {
-        governautGovernance = new GovernautGovernance();
+        governautGovernance = new GovernautGovernance(TOKEN, TIMELOCKCONTROLLER, IDENTITYMANAGER);
     }
 
     function testDefault() public { }
