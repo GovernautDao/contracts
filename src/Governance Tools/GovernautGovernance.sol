@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 
 /**
- * @title Governance
+ * @title GovernautGovernance
  * @author Governaut
  * @notice Contract will facilitate governance interactions, such as voting and proposal submissions, on Optimism (and
  * #Superchain Networks).
@@ -37,4 +37,44 @@ contract GovernautGovernance is
         GovernorVotesQuorumFraction(4)
         GovernorTimelockControl(_timelock)
     { }
+
+    // Overrides required by Solidity for integrating various extensions
+    function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.votingDelay();
+    }
+
+    function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.votingPeriod();
+    }
+
+    function quorum(uint256 blockNumber)
+        public
+        view
+        override(Governor, GovernorVotesQuorumFraction)
+        returns (uint256)
+    {
+        return super.quorum(blockNumber);
+    }
+
+    function state(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (ProposalState)
+    {
+        return super.state(proposalId);
+    }
+
+    function proposalNeedsQueuing(uint256 proposalId)
+        public
+        view
+        override(Governor, GovernorTimelockControl)
+        returns (bool)
+    {
+        return super.proposalNeedsQueuing(proposalId);
+    }
+
+    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.proposalThreshold();
+    }
 }
