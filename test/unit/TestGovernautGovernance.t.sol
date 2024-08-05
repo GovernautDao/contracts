@@ -3,16 +3,22 @@ pragma solidity 0.8.24;
 
 import { Test, console2 } from "forge-std/Test.sol";
 import { GovernautGovernance } from "../../src/Governance Tools/GovernautGovernance.sol";
+import { MockVotes } from "../mocks/MockVotes.sol";
+import { MockTimelockController } from "../mocks/MockTimelockController.sol";
 
 contract TestGovernautGovernance is Test {
     GovernautGovernance governautGovernance;
+    MockVotes mockVotes;
+    MockTimelockController mockTimelockController;
 
-    address TOKEN = makeAddr("IVotes Token");
-    address TIMELOCKCONTROLLER = makeAddr("TimelockController");
-    address IDENTITYMANAGER = makeAddr("IdentityManager");
+    address IDENTITYMANAGER_ADDRESS = makeAddr("Identity Manager Address");
 
     function setUp() public {
-        governautGovernance = new GovernautGovernance(TOKEN, TIMELOCKCONTROLLER, IDENTITYMANAGER);
+        // Deploy mock contracts
+        mockVotes = new MockVotes();
+        mockTimelockController = new MockTimelockController();
+
+        governautGovernance = new GovernautGovernance(mockVotes, mockTimelockController, IDENTITYMANAGER_ADDRESS);
     }
 
     function testDefault() public { }
