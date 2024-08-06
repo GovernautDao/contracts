@@ -9,25 +9,34 @@ pragma solidity 0.8.24;
  * its goal.
  */
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IGovernautGovernance } from "../Onchain Funding/interfaces/IGovernautGovernance.sol";
 
 contract Funding is Ownable {
-    IERC20 public token; // ERC20 token used for contributions
+    IGovernautGovernance governautGovernance;
+    IERC20 token; // ERC20 token used for contributions
 
-    struct Project {
+    struct FundingGrant {
         address projectOwner; // Owner of the project
         uint256 startTimestamp; // Start timestamp of the funding period
         uint256 endTimestamp; // End timestamp of the funding period
         uint256 goalAmount; // Goal amount to be raised
-        mapping(address => uint256) contributions; // Mapping to store contributions
         uint256 totalContributed; // Total amount contributed so far
         bool isActive; // Whether the funding is active
     }
 
-    /// @dev Mapping to store project details to projectOwner address
-    mapping(address => Project) public projects;
+    /// @dev Initializes the Funding contract with the given parameters.
+    uint256 private grantIdCounter = 0;
 
-    constructor(address initialOwner, IERC20 _token) Ownable(initialOwner) {
+    /// @dev Mapping to store project details
+    mapping(uint256 => FundingGrant) private grants;
+
+    /// @dev Mapping to store contributions to projectOwner address
+    mapping(address => mapping(address => uint256)) private projectContributions;
+
+    constructor(address initialOwner, address _governautGovernanceAddress, IERC20 _token) Ownable(initialOwner) {
+        require(_governautGovernanceAddress != address(0), "GovernautGovernance address cannot be 0");
+        governautGovernance = IGovernautGovernance(_governautGovernanceAddress);
         token = _token;
     }
 }

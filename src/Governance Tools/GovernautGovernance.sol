@@ -30,15 +30,24 @@ contract GovernautGovernance is
     GovernorVotesQuorumFraction,
     GovernorTimelockControl
 {
+    /// @notice Thrown when attempting to propose with an address of zero.
+    error IdentityManagerCantBeAddressZero();
+
     /// @dev Immutable reference to the IdentityManager contract responsible for verifying identities.
     IdentityManager immutable identityManager;
+
+    /// @dev Mapping to store approved proposers.
+    mapping(address => bool) private approvedProposers;
+
+    /// @dev Mapping to store proposer's address for each proposal ID
+    mapping(uint256 => address) private _proposalProposers;
 
     /// @dev Event emitted when a new proposal is created.
     event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string indexed description);
 
     /// @dev Modifier to ensure that only verified identities can execute certain functions.
     // modifier onlyVerifiedIdentity() {
-    //     require(identityManager.isVerified(msg.sender), "Caller is not a verified identity");
+    //     require(identityManager.isVerified(msg.sender), "Caller must have a verified identity to propose");
     //     _;
     // }
 
@@ -59,6 +68,9 @@ contract GovernautGovernance is
         GovernorVotesQuorumFraction(4)
         GovernorTimelockControl(_timelock)
     {
+        if (_identityManagerAddress == address(0)) {
+            revert IdentityManagerCantBeAddressZero();
+        }
         identityManager = IdentityManager(_identityManagerAddress);
     }
 
@@ -85,6 +97,7 @@ contract GovernautGovernance is
         returns (uint256)
     {
         uint256 proposalId = _propose(targets, values, calldatas, description, proposer);
+        _proposalProposers[proposalId] = proposer;
         emit ProposalCreated(proposalId, proposer, description);
         return proposalId;
     }
@@ -92,6 +105,9 @@ contract GovernautGovernance is
     ///////////////////////////////////////////////////////////////////////////////
     ///                        Internal Functions                              ///
     //////////////////////////////////////////////////////////////////////////////
+    function approveProposer(address proposer) internal {
+        approvedProposers[proposer] = true;
+    }
     /**
      * @dev Creates a new proposal with the given details.
      * @param targets Addresses to which the proposals will be sent.
@@ -100,6 +116,7 @@ contract GovernautGovernance is
      * @param description Hash of the proposal description.
      * @return Proposal ID.
      */
+
     function _propose(
         address[] memory targets,
         uint256[] memory values,
@@ -136,7 +153,6 @@ contract GovernautGovernance is
     {
         return super._queueOperations(proposalId, targets, values, calldatas, descriptionHash);
     }
-
     /**
      * @dev Executes operations defined in a proposal.
      * @param proposalId ID of the proposal.
@@ -145,6 +161,7 @@ contract GovernautGovernance is
      * @param calldatas Calldata to pass along with the operations.
      * @param descriptionHash Hash of the proposal description.
      */
+
     function _executeOperations(
         uint256 proposalId,
         address[] memory targets,
@@ -156,6 +173,8 @@ contract GovernautGovernance is
         override(Governor, GovernorTimelockControl)
     {
         super._executeOperations(proposalId, targets, values, calldatas, descriptionHash);
+        address proposerAddress = _proposalProposers[proposalId];
+        approveProposer(proposerAddress);
     }
 
     /**
