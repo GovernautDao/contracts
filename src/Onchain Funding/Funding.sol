@@ -23,6 +23,7 @@ contract Funding is Ownable {
         uint256 goalAmount; // Goal amount to be raised
         uint256 totalContributed; // Total amount contributed so far
         bool isActive; // Whether the funding is active
+        bool goalReached; // Whether the goal amount was reached
     }
 
     /// @dev Initializes the Funding contract with the given parameters.
@@ -31,12 +32,17 @@ contract Funding is Ownable {
     /// @dev Mapping to store project details
     mapping(uint256 => FundingGrant) private grants;
 
-    /// @dev Mapping to store contributions to projectOwner address
-    mapping(address => mapping(address => uint256)) private projectContributions;
+    /// @dev Mapping to store contributions by user for each grant
+    mapping(uint256 => mapping(address => uint256)) private contributionsByUser;
 
     event GrantCreated(
-        uint256 grantId, address projectOwner, uint256 goalAmount, uint256 startTimestamp, uint256 endTimestamp
+        uint256 indexed grantId,
+        address indexed projectOwner,
+        uint256 indexed goalAmount,
+        uint256 startTimestamp,
+        uint256 endTimestamp
     );
+    event ContributionMade(address indexed contributor, uint256 indexed grantId, uint256 indexed amount);
 
     modifier onlyApprovedProposer() {
         require(governautGovernance.approvedProposers(msg.sender), "Caller is not an approved proposer");
@@ -53,15 +59,28 @@ contract Funding is Ownable {
         uint256 startTimestamp = block.timestamp;
         uint256 endTimestamp = startTimestamp + 21 days;
 
-        grants[++grantIdCounter] = FundingGrant({
+        grants[grantIdCounter] = FundingGrant({
             projectOwner: projectOwner,
             startTimestamp: startTimestamp,
             endTimestamp: endTimestamp,
             goalAmount: goalAmount,
             totalContributed: 0,
-            isActive: true
+            isActive: true,
+            goalReached: false
         });
 
         emit GrantCreated(grantIdCounter, projectOwner, goalAmount, startTimestamp, endTimestamp);
+        grantIdCounter++;
+    }
+
+    function contribute(uint256 grantId, uint256 amount) external {
+        require(grants[grantId].isActive, "Grant is not active");
+        require(block.timestamp < grants[grantId].endTimestamp, "Grant has ended");
+        require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+
+        grants[grantId].totalContributed += amount;
+        contributionsByUser[grantId][msg.sender] += amount;
+
+        emit ContributionMade(msg.sender, grantId, amount);
     }
 }
