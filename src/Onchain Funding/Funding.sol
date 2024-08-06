@@ -34,9 +34,34 @@ contract Funding is Ownable {
     /// @dev Mapping to store contributions to projectOwner address
     mapping(address => mapping(address => uint256)) private projectContributions;
 
+    event GrantCreated(
+        uint256 grantId, address projectOwner, uint256 goalAmount, uint256 startTimestamp, uint256 endTimestamp
+    );
+
+    modifier onlyApprovedProposer() {
+        require(governautGovernance.approvedProposers(msg.sender), "Caller is not an approved proposer");
+        _;
+    }
+
     constructor(address initialOwner, address _governautGovernanceAddress, IERC20 _token) Ownable(initialOwner) {
         require(_governautGovernanceAddress != address(0), "GovernautGovernance address cannot be 0");
         governautGovernance = IGovernautGovernance(_governautGovernanceAddress);
         token = _token;
+    }
+
+    function createGrant(address projectOwner, uint256 goalAmount) external onlyApprovedProposer {
+        uint256 startTimestamp = block.timestamp;
+        uint256 endTimestamp = startTimestamp + 21 days;
+
+        grants[++grantIdCounter] = FundingGrant({
+            projectOwner: projectOwner,
+            startTimestamp: startTimestamp,
+            endTimestamp: endTimestamp,
+            goalAmount: goalAmount,
+            totalContributed: 0,
+            isActive: true
+        });
+
+        emit GrantCreated(grantIdCounter, projectOwner, goalAmount, startTimestamp, endTimestamp);
     }
 }
