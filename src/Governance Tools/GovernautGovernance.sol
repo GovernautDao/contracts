@@ -46,10 +46,10 @@ contract GovernautGovernance is
     event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string indexed description);
 
     /// @dev Modifier to ensure that only verified identities can execute certain functions.
-    // modifier onlyVerifiedIdentity() {
-    //     require(identityManager.isVerified(msg.sender), "Caller must have a verified identity to propose");
-    //     _;
-    // }
+    modifier onlyVerifiedIdentity() {
+        require(identityManager.getIsVerified(msg.sender), "Caller must have a verified identity to propose");
+        _;
+    }
 
     /**
      * @param _token Address of the token used for voting.
