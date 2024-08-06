@@ -11,6 +11,7 @@ contract TestIdentityManager is Test {
 
     address OWNER = makeAddr("Owner");
 
+    //potential error coming from helperConfig _appid
     function setUp() public {
         helperConfig = new HelperConfig();
         identityManager = new IdentityManager(
