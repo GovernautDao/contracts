@@ -17,6 +17,8 @@ import { IdentityManager } from "../Identity Management/IdentityManager.sol";
  * @title GovernautGovernance
  * @author Governaut
  * @notice This contract implements a governance system using OpenZeppelin's Governor contracts.
+ * Manages grants, including submission, reviews, approval, and disbursement processes.
+ * It could integrate with Optimism's infrastructure for efficient transaction processing.
  * It integrates with an Identity Manager to verify the identities of those proposing actions.
  */
 contract GovernautGovernance is
