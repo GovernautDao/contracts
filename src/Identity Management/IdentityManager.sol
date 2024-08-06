@@ -46,11 +46,11 @@ contract IdentityManager is Ownable {
   /// @param _actionId The World ID action ID
   constructor(
     address initialOwner,
-    IWorldID _worldId,
+    address _worldId,
     string memory _appId,
     string memory _actionId
   ) Ownable(initialOwner) {
-    worldId = _worldId;
+    worldId = IWorldID(_worldId);
     externalNullifier = abi
       .encodePacked(abi.encodePacked(_appId).hashToField(), _actionId)
       .hashToField();
