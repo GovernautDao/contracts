@@ -63,7 +63,7 @@ contract GovernautGovernance is
         address _identityManagerAddress
     )
         Governor("Governaut")
-        GovernorSettings(1 days, 1 weeks, 10e18)
+        GovernorSettings(1 days, 2 weeks, 5e18)
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
         GovernorTimelockControl(_timelock)
