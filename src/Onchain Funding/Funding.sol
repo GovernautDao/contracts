@@ -43,6 +43,9 @@ contract Funding is Ownable {
         uint256 endTimestamp
     );
     event ContributionMade(address indexed contributor, uint256 indexed grantId, uint256 indexed amount);
+    event GoalReached(uint256 indexed grantId, address indexed projectOwner);
+    event Refunded(address indexed contributor, uint256 indexed grantId, uint256 indexed amount);
+    event FundsClaimed(uint256 indexed grantId, address indexed projectOwner, uint256 indexed amount);
 
     modifier onlyApprovedProposer() {
         require(governautGovernance.approvedProposers(msg.sender), "Caller is not an approved proposer");
@@ -74,13 +77,45 @@ contract Funding is Ownable {
     }
 
     function contribute(uint256 grantId, uint256 amount) external {
-        require(grants[grantId].isActive, "Grant is not active");
-        require(block.timestamp < grants[grantId].endTimestamp, "Grant has ended");
+        FundingGrant storage grant = grants[grantId];
+
+        require(grant.isActive, "Grant is not active");
+        require(block.timestamp < grant.endTimestamp, "Grant has ended");
         require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
-        grants[grantId].totalContributed += amount;
+        grant.totalContributed += amount;
         contributionsByUser[grantId][msg.sender] += amount;
 
         emit ContributionMade(msg.sender, grantId, amount);
+    }
+
+    function claimRefund(uint256 grantId) external {
+        FundingGrant storage grant = grants[grantId];
+
+        require(block.timestamp > grant.endTimestamp, "Grant has not ended");
+        require(grant.totalContributed >= grant.goalAmount, "Grant goal not met");
+
+        uint256 contributedAmount = contributionsByUser[grantId][msg.sender];
+        require(contributedAmount > 0, "No contributions to refund");
+
+        contributionsByUser[grantId][msg.sender] = 0;
+        require(token.transfer(msg.sender, contributedAmount), "Refund failed");
+
+        emit Refunded(msg.sender, grantId, contributedAmount);
+    }
+
+    function claimFunds(uint256 grantId) external {
+        FundingGrant storage grant = grants[grantId];
+
+        require(msg.sender == grant.projectOwner, "Only project owner can claim");
+        require(block.timestamp > grant.endTimestamp, "Grant has not ended");
+        require(grant.totalContributed >= grant.goalAmount, "Grant goal not met");
+
+        uint256 amountToClaim = grant.totalContributed;
+        grant.isActive = false; // Prevent further actions on this grant
+
+        require(token.transfer(msg.sender, amountToClaim), "Claim failed");
+
+        emit FundsClaimed(grantId, msg.sender, amountToClaim);
     }
 }
