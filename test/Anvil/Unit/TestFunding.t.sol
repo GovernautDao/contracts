@@ -14,7 +14,7 @@ contract TestFunding is Test {
 
     address OWNER = makeAddr("Owner");
 
-    function setup() public {
+    function setUp() public {
         token = new MockERC20(1e18);
         governance = new MockGovernance();
         funding = new Funding(OWNER, address(governance), IERC20(address(token)));

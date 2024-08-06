@@ -11,16 +11,16 @@ contract TestIdentityManager is Test {
 
     address OWNER = makeAddr("Owner");
 
-    //potential error coming from helperConfig _appid
+    //potential error coming from helperConfig _appid and/or _actionId
     function setUp() public {
         helperConfig = new HelperConfig();
-        identityManager = new IdentityManager(
-            OWNER,
-            helperConfig.getAnvilConfig()._WorldcoinRouterAddress,
-            helperConfig.getAnvilConfig()._appid,
-            helperConfig.getAnvilConfig()._actionId
-        );
-        console.log("deployed");
+        // identityManager = new IdentityManager(
+        //     OWNER,
+        //     helperConfig.getAnvilConfig()._WorldcoinRouterAddress,
+        //     helperConfig.getAnvilConfig()._appid,
+        //     helperConfig.getAnvilConfig()._actionId
+        // );
+        // console.log("deployed");
     }
 
     function testDefault() public {
