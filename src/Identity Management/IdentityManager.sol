@@ -8,8 +8,8 @@ pragma solidity 0.8.24;
  * It will store mappings of user addresses to unique identifiers provided by World ID, ensuring privacy and security.
  */
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { ByteHasher } from "./helpers/ByteHasher.sol";
-import { IWorldID } from "./interfaces/IWorldID.sol";
+import { ByteHasher } from "./Helpers/ByteHasher.sol";
+import { IWorldID } from "./Interfaces/IWorldID.sol";
 
 contract IdentityManager is Ownable {
     using ByteHasher for bytes;
