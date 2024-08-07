@@ -10,7 +10,6 @@ import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import { GovernorVotesQuorumFraction } from
     "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
 import { GovernorTimelockControl } from "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
-import { TimelockController } from "@openzeppelin/contracts/governance/TimelockController.sol";
 import { IdentityManager } from "../Identity Management/IdentityManager.sol";
 
 /**
@@ -27,8 +26,7 @@ contract GovernautGovernance is
     GovernorCountingSimple,
     GovernorStorage,
     GovernorVotes,
-    GovernorVotesQuorumFraction,
-    GovernorTimelockControl
+    GovernorVotesQuorumFraction
 {
     ///////////////////////////////////////////////////////////////////////////////
     ///                                  ERRORS                                ///
@@ -55,20 +53,17 @@ contract GovernautGovernance is
 
     /**
      * @param _token Address of the token used for voting.
-     * @param _timelock Address of the timelock controller.
      * @param _identityManagerAddress Address of the Identity Manager contract.
      * @dev Initializes the Governaut Governance contract with the given parameters.
      */
     constructor(
         IVotes _token,
-        TimelockController _timelock,
         address _identityManagerAddress
     )
         Governor("Governaut")
-        GovernorSettings(1 days, 2 weeks, 5e18)
+        GovernorSettings(1 days, 3 weeks, 0e18)
         GovernorVotes(_token)
         GovernorVotesQuorumFraction(4)
-        GovernorTimelockControl(_timelock)
     {
         if (_identityManagerAddress == address(0)) {
             revert IdentityManagerCantBeAddressZero();
@@ -150,7 +145,7 @@ contract GovernautGovernance is
         bytes32 descriptionHash
     )
         internal
-        override(Governor, GovernorTimelockControl)
+        override(Governor)
         returns (uint48)
     {
         return super._queueOperations(proposalId, targets, values, calldatas, descriptionHash);
@@ -172,7 +167,7 @@ contract GovernautGovernance is
         bytes32 descriptionHash
     )
         internal
-        override(Governor, GovernorTimelockControl)
+        override(Governor)
     {
         super._executeOperations(proposalId, targets, values, calldatas, descriptionHash);
         address proposerAddress = _proposalProposers[proposalId];
@@ -194,7 +189,7 @@ contract GovernautGovernance is
         bytes32 descriptionHash
     )
         internal
-        override(Governor, GovernorTimelockControl)
+        override(Governor)
         returns (uint256)
     {
         return super._cancel(targets, values, calldatas, descriptionHash);
@@ -207,7 +202,7 @@ contract GovernautGovernance is
      * @dev Returns the executor address for proposals.
      * @return Executor address.
      */
-    function _executor() internal view override(Governor, GovernorTimelockControl) returns (address) {
+    function _executor() internal view override(Governor) returns (address) {
         return super._executor();
     }
 
@@ -240,22 +235,12 @@ contract GovernautGovernance is
     }
 
     /// @dev Returns the current state of a proposal.
-    function state(uint256 proposalId)
-        public
-        view
-        override(Governor, GovernorTimelockControl)
-        returns (ProposalState)
-    {
+    function state(uint256 proposalId) public view override(Governor) returns (ProposalState) {
         return super.state(proposalId);
     }
 
     /// @dev Determines whether a proposal needs to be queued before execution.
-    function proposalNeedsQueuing(uint256 proposalId)
-        public
-        view
-        override(Governor, GovernorTimelockControl)
-        returns (bool)
-    {
+    function proposalNeedsQueuing(uint256 proposalId) public view override(Governor) returns (bool) {
         return super.proposalNeedsQueuing(proposalId);
     }
 
