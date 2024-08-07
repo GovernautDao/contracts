@@ -30,7 +30,9 @@ contract GovernautGovernance is
     GovernorVotesQuorumFraction,
     GovernorTimelockControl
 {
-    /// @notice Thrown when attempting to propose with an address of zero.
+    ///////////////////////////////////////////////////////////////////////////////
+    ///                                  ERRORS                                ///
+    //////////////////////////////////////////////////////////////////////////////
     error IdentityManagerCantBeAddressZero();
 
     /// @dev Immutable reference to the IdentityManager contract responsible for verifying identities.
@@ -82,7 +84,6 @@ contract GovernautGovernance is
      * @param values Array of amounts of tokens to send along with the proposals.
      * @param calldatas Array of calldata to pass along with the proposals.
      * @param description Description of the proposal.
-     * @param proposer Address of the proposer.
      * @return Proposal ID.
      * @dev Calls the `_propose` function to create a new proposal.
      */
@@ -93,7 +94,8 @@ contract GovernautGovernance is
         string memory description,
         address proposer
     )
-        external //onlyVerifiedIdentity
+        external
+        onlyVerifiedIdentity
         returns (uint256)
     {
         uint256 proposalId = _propose(targets, values, calldatas, description, proposer);
@@ -212,6 +214,9 @@ contract GovernautGovernance is
     ///////////////////////////////////////////////////////////////////////////////
     ///                        Public/External View                            ///
     //////////////////////////////////////////////////////////////////////////////
+    function isApprovedProposer(address proposer) public view returns (bool) {
+        return approvedProposers[proposer];
+    }
 
     // Overrides required by Solidity for integrating various extensions
     /// @dev Returns the minimum time between consecutive votes.

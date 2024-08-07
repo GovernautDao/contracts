@@ -14,10 +14,15 @@ pragma solidity 0.8.24;
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IGovernautGovernance } from "../Onchain Funding/interfaces/IGovernautGovernance.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract Funding is Ownable {
+contract Funding is Ownable, ReentrancyGuard {
     IGovernautGovernance governautGovernance; // Governance contract to check for approved proposers
     IERC20 token; // ERC20 token used for contributions
+
+    ///////////////////////////////////////////////////////////////////////////////
+    ///                                  ERRORS                                ///
+    //////////////////////////////////////////////////////////////////////////////
 
     /// @dev Represents a grant for project funding
     struct FundingGrant {
@@ -115,11 +120,11 @@ contract Funding is Ownable {
      * @dev Allows contributors to claim a refund if the grant's goal is not met by the end of the funding period.
      * @param grantId The ID of the grant to claim a refund from.
      */
-    function claimRefund(uint256 grantId) external {
+    function claimRefund(uint256 grantId) external nonReentrant {
         FundingGrant storage grant = grants[grantId];
 
         require(block.timestamp > grant.endTimestamp, "Grant has not ended");
-        require(grant.totalContributed >= grant.goalAmount, "Grant goal not met");
+        require(grant.totalContributed < grant.goalAmount, "Grant goal not met");
 
         uint256 contributedAmount = contributionsByUser[grantId][msg.sender];
         require(contributedAmount > 0, "No contributions to refund");
@@ -134,7 +139,7 @@ contract Funding is Ownable {
      * @dev Allows the project owner to claim the funds raised if the grant's goal is met.
      * @param grantId The ID of the grant whose funds are to be claimed.
      */
-    function claimFunds(uint256 grantId) external {
+    function claimFunds(uint256 grantId) external nonReentrant {
         FundingGrant storage grant = grants[grantId];
 
         require(msg.sender == grant.projectOwner, "Only project owner can claim");
@@ -147,5 +152,28 @@ contract Funding is Ownable {
         require(token.transfer(msg.sender, amountToClaim), "Claim failed");
 
         emit FundsClaimed(grantId, msg.sender, amountToClaim);
+    }
+
+    function getGrantStatus(uint256 grantId)
+        external
+        view
+        returns (
+            address projectOwner,
+            uint256 startTimestamp,
+            uint256 endTimestamp,
+            uint256 goalAmount,
+            uint256 totalContributed,
+            bool isActive
+        )
+    {
+        FundingGrant storage grant = grants[grantId];
+        return (
+            grant.projectOwner,
+            grant.startTimestamp,
+            grant.endTimestamp,
+            grant.goalAmount,
+            grant.totalContributed,
+            grant.isActive
+        );
     }
 }
