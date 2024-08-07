@@ -18,7 +18,7 @@ contract TestGovernautGovernance is Test {
         mockVotes = new MockVotes();
         mockTimelockController = new MockTimelockController();
 
-        governautGovernance = new GovernautGovernance(mockVotes, mockTimelockController, IDENTITYMANAGER_ADDRESS);
+        governautGovernance = new GovernautGovernance(mockVotes, IDENTITYMANAGER_ADDRESS);
     }
 
     function testDefault() public { }

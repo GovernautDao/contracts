@@ -9,7 +9,6 @@ import { GovernorVotes } from "@openzeppelin/contracts/governance/extensions/Gov
 import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 import { GovernorVotesQuorumFraction } from
     "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
-import { GovernorTimelockControl } from "@openzeppelin/contracts/governance/extensions/GovernorTimelockControl.sol";
 import { IdentityManager } from "../Identity Management/IdentityManager.sol";
 
 /**
@@ -35,12 +34,6 @@ contract GovernautGovernance is
 
     /// @dev Immutable reference to the IdentityManager contract responsible for verifying identities.
     IdentityManager immutable identityManager;
-
-    /// @dev Mapping to store approved proposers.
-    mapping(address => bool) private approvedProposers;
-
-    /// @dev Mapping to store proposer's address for each proposal ID
-    mapping(uint256 => address) private _proposalProposers;
 
     /// @dev Event emitted when a new proposal is created.
     event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string indexed description);
@@ -94,7 +87,6 @@ contract GovernautGovernance is
         returns (uint256)
     {
         uint256 proposalId = _propose(targets, values, calldatas, description, proposer);
-        _proposalProposers[proposalId] = proposer;
         emit ProposalCreated(proposalId, proposer, description);
         return proposalId;
     }
@@ -102,17 +94,27 @@ contract GovernautGovernance is
     ///////////////////////////////////////////////////////////////////////////////
     ///                        Internal Functions                              ///
     //////////////////////////////////////////////////////////////////////////////
-    function approveProposer(address proposer) internal {
-        approvedProposers[proposer] = true;
+    // The following functions are overrides required by Solidity.
+    function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.votingDelay();
     }
-    /**
-     * @dev Creates a new proposal with the given details.
-     * @param targets Addresses to which the proposals will be sent.
-     * @param values Amounts of tokens to send along with the proposals.
-     * @param calldatas Calldata to pass along with the proposals.
-     * @param description Hash of the proposal description.
-     * @return Proposal ID.
-     */
+
+    function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.votingPeriod();
+    }
+
+    function quorum(uint256 blockNumber)
+        public
+        view
+        override(Governor, GovernorVotesQuorumFraction)
+        returns (uint256)
+    {
+        return super.quorum(blockNumber);
+    }
+
+    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
+        return super.proposalThreshold();
+    }
 
     function _propose(
         address[] memory targets,
@@ -126,126 +128,5 @@ contract GovernautGovernance is
         returns (uint256)
     {
         return super._propose(targets, values, calldatas, description, proposer);
-    }
-
-    /**
-     * @dev Queues operations defined in a proposal for execution.
-     * @param proposalId ID of the proposal.
-     * @param targets Addresses to which the operations will be sent.
-     * @param values Amounts of tokens to send along with the operations.
-     * @param calldatas Calldata to pass along with the operations.
-     * @param descriptionHash Hash of the proposal description.
-     * @return Queue ID.
-     */
-    function _queueOperations(
-        uint256 proposalId,
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 descriptionHash
-    )
-        internal
-        override(Governor)
-        returns (uint48)
-    {
-        return super._queueOperations(proposalId, targets, values, calldatas, descriptionHash);
-    }
-    /**
-     * @dev Executes operations defined in a proposal.
-     * @param proposalId ID of the proposal.
-     * @param targets Addresses to which the operations will be sent.
-     * @param values Amounts of tokens to send along with the operations.
-     * @param calldatas Calldata to pass along with the operations.
-     * @param descriptionHash Hash of the proposal description.
-     */
-
-    function _executeOperations(
-        uint256 proposalId,
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 descriptionHash
-    )
-        internal
-        override(Governor)
-    {
-        super._executeOperations(proposalId, targets, values, calldatas, descriptionHash);
-        address proposerAddress = _proposalProposers[proposalId];
-        approveProposer(proposerAddress);
-    }
-
-    /**
-     * @dev Cancels operations defined in a proposal.
-     * @param targets Addresses to which the operations will be sent.
-     * @param values Amounts of tokens to send along with the operations.
-     * @param calldatas Calldata to pass along with the operations.
-     * @param descriptionHash Hash of the proposal description.
-     * @return Cancellation transaction hash.
-     */
-    function _cancel(
-        address[] memory targets,
-        uint256[] memory values,
-        bytes[] memory calldatas,
-        bytes32 descriptionHash
-    )
-        internal
-        override(Governor)
-        returns (uint256)
-    {
-        return super._cancel(targets, values, calldatas, descriptionHash);
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////
-    ///                        Internal View                                   ///
-    //////////////////////////////////////////////////////////////////////////////
-    /**
-     * @dev Returns the executor address for proposals.
-     * @return Executor address.
-     */
-    function _executor() internal view override(Governor) returns (address) {
-        return super._executor();
-    }
-
-    ///////////////////////////////////////////////////////////////////////////////
-    ///                        Public/External View                            ///
-    //////////////////////////////////////////////////////////////////////////////
-    function isApprovedProposer(address proposer) public view returns (bool) {
-        return approvedProposers[proposer];
-    }
-
-    // Overrides required by Solidity for integrating various extensions
-    /// @dev Returns the minimum time between consecutive votes.
-    function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
-        return super.votingDelay();
-    }
-
-    /// @dev Returns the duration after which a vote becomes eligible for execution.
-    function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
-        return super.votingPeriod();
-    }
-
-    /// @dev Calculates the quorum based on the current block number.
-    function quorum(uint256 blockNumber)
-        public
-        view
-        override(Governor, GovernorVotesQuorumFraction)
-        returns (uint256)
-    {
-        return super.quorum(blockNumber);
-    }
-
-    /// @dev Returns the current state of a proposal.
-    function state(uint256 proposalId) public view override(Governor) returns (ProposalState) {
-        return super.state(proposalId);
-    }
-
-    /// @dev Determines whether a proposal needs to be queued before execution.
-    function proposalNeedsQueuing(uint256 proposalId) public view override(Governor) returns (bool) {
-        return super.proposalNeedsQueuing(proposalId);
-    }
-
-    /// @dev Returns the minimum number of votes required to submit a proposal.
-    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
-        return super.proposalThreshold();
     }
 }
