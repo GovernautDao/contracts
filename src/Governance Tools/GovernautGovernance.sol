@@ -44,6 +44,9 @@ contract GovernautGovernance is
     /// @dev Event emitted when a new proposal is created.
     event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string indexed description);
 
+    /// @dev Event emitted when a proposal is ended.
+    event ProposalEnded(uint256 indexed proposalId, address indexed proposer, bool executed);
+
     /// @dev Modifier to ensure that only verified identities can execute certain functions.
     modifier onlyVerifiedIdentity() {
         if (!identityManager.getIsVerified(msg.sender)) {
@@ -123,13 +126,16 @@ contract GovernautGovernance is
         override
         returns (uint256)
     {
-        // Execute the proposal using the inherited execute logic
         uint256 proposalId = super.execute(targets, values, calldatas, descriptionHash);
 
         // Retrieve the proposer's address using the proposal ID
         address proposer = _proposalIdToProposer[proposalId];
+
         // Mark the proposer as approved
         approvedProposers[proposer] = true;
+
+        // Emit the ProposalEnded event indicating the proposal was executed
+        emit ProposalEnded(proposalId, proposer, true);
 
         return proposalId;
     }
@@ -171,5 +177,16 @@ contract GovernautGovernance is
         returns (uint256)
     {
         return super._propose(targets, values, calldatas, description, proposer);
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////
+    ///                        Internal Functions                              ///
+    //////////////////////////////////////////////////////////////////////////////
+    /**
+     *
+     * @param proposer To check if a proposer is approved
+     */
+    function isProposerApproved(address proposer) external view returns (bool) {
+        return approvedProposers[proposer];
     }
 }

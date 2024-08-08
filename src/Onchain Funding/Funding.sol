@@ -4,19 +4,20 @@ pragma solidity 0.8.24;
 /**
  * @title Funding
  * @author Governaut
- * @dev Implements a crowdfunding mechanism, integrated with a governance contract for proposal validation. It supports
- * project grant creation, contributions in ERC20 tokens, and conditional fund withdrawal.
- * @notice This contract enables crowdfunding for projects through ERC20 token contributions. It allows for the creation
- * of project grants by approved proposers, contributions by supporters, and conditional withdrawal of funds by project
- * owners based on funding goals and timelines.
+ * @dev A crowdfunding contract that allows for the creation of project grants, contributions to those grants using
+ * ERC20 tokens, and the withdrawal of funds by project owners upon successful funding. It integrates with a governance
+ * contract to restrict grant creation to approved proposers.
+ * @notice This contract facilitates crowdfunding for various projects by accepting ERC20 tokens as contributions. It
+ * allows an owner to create projects, contributors to donate, and the owner to withdraw funds once a project reaches
+ * its goal.
  */
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IGovernautGovernance } from "../Onchain Funding/interfaces/IGovernautGovernance.sol";
+import { IGovernaut } from "../Onchain Funding/interfaces/IGovernaut.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract Funding is Ownable, ReentrancyGuard {
-    IGovernautGovernance governautGovernance; // Governance contract to check for approved proposers
+    IGovernaut governance; // Governance contract to check for approved proposers
     IERC20 token; // ERC20 token used for contributions
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -70,23 +71,23 @@ contract Funding is Ownable, ReentrancyGuard {
 
     /// @dev Modifier to check if the caller is an approved proposer
     modifier onlyApprovedProposer() {
-        if (!governautGovernance.approvedProposers(msg.sender)) {
+        if (!governance.isProposerApproved(msg.sender)) {
             revert UserIsntAnApprovedProposer();
         }
         _;
     }
+
     /**
      * @dev Constructor to initialize the Funding contract with governance and token addresses.
      * @param initialOwner Address of the initial owner of the contract.
-     * @param _governautGovernanceAddress Address of the GovernautGovernance contract.
+     * @param _governautAddress Address of the GovernautGovernance contract.
      * @param _token Address of the ERC20 token to be used for contributions.
      */
-
-    constructor(address initialOwner, address _governautGovernanceAddress, IERC20 _token) Ownable(initialOwner) {
-        if (_governautGovernanceAddress == address(0)) {
+    constructor(address initialOwner, address _governautAddress, IERC20 _token) Ownable(initialOwner) {
+        if (_governautAddress == address(0)) {
             revert GovernautGovernanceCantBeAddressZero();
         }
-        governautGovernance = IGovernautGovernance(_governautGovernanceAddress);
+        governance = IGovernaut(_governautAddress);
         token = _token;
     }
 
@@ -94,7 +95,6 @@ contract Funding is Ownable, ReentrancyGuard {
      * @dev Creates a new grant with the specified details. Only callable by approved proposers.
      * @param projectOwner Address of the project owner.
      * @param goalAmount The funding goal amount for the project.
-     * @notice This function initializes a new grant with a unique ID, registers it, and emits a GrantCreated event.
      */
     function createGrant(address projectOwner, uint256 goalAmount) external onlyApprovedProposer {
         uint256 startTimestamp = block.timestamp;
