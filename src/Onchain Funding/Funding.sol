@@ -4,12 +4,11 @@ pragma solidity 0.8.24;
 /**
  * @title Funding
  * @author Governaut
- * @dev A crowdfunding contract that allows for the creation of project grants, contributions to those grants using
- * ERC20 tokens, and the withdrawal of funds by project owners upon successful funding. It integrates with a governance
- * contract to restrict grant creation to approved proposers.
- * @notice This contract facilitates crowdfunding for various projects by accepting ERC20 tokens as contributions. It
- * allows an owner to create projects, contributors to donate, and the owner to withdraw funds once a project reaches
- * its goal.
+ * @dev Implements a crowdfunding mechanism, integrated with a governance contract for proposal validation. It supports
+ * project grant creation, contributions in ERC20 tokens, and conditional fund withdrawal.
+ * @notice This contract enables crowdfunding for projects through ERC20 token contributions. It allows for the creation
+ * of project grants by approved proposers, contributions by supporters, and conditional withdrawal of funds by project
+ * owners based on funding goals and timelines.
  */
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -23,6 +22,16 @@ contract Funding is Ownable, ReentrancyGuard {
     ///////////////////////////////////////////////////////////////////////////////
     ///                                  ERRORS                                ///
     //////////////////////////////////////////////////////////////////////////////
+    error UserIsntAnApprovedProposer();
+    error GovernautGovernanceCantBeAddressZero();
+    error GrantHasEnded();
+    error GrantGoalIsMet();
+    error NoContributions();
+    error OnlyProjectOwnerCanClaim();
+    error GrantHasNotEnded();
+    error GrantGoalNotMet();
+    error NotEnoughTimePassed();
+    error AllClaimsClaimed();
 
     /// @dev Represents a grant for project funding
     struct FundingGrant {
@@ -31,7 +40,8 @@ contract Funding is Ownable, ReentrancyGuard {
         uint256 endTimestamp; // End timestamp of the funding period
         uint256 goalAmount; // Goal amount to be raised
         uint256 totalContributed; // Total amount contributed so far
-        bool isActive; // Whether the funding is active
+        uint256 lastClaimTimestamp; // track the last claim timestamp
+        uint8 numberOfClaimsMade; // track the number of claims made
     }
 
     /// @dev Counter to assign unique IDs to each grant
@@ -60,18 +70,22 @@ contract Funding is Ownable, ReentrancyGuard {
 
     /// @dev Modifier to check if the caller is an approved proposer
     modifier onlyApprovedProposer() {
-        require(governautGovernance.approvedProposers(msg.sender), "Caller is not an approved proposer");
+        if (!governautGovernance.approvedProposers(msg.sender)) {
+            revert UserIsntAnApprovedProposer();
+        }
         _;
     }
-
     /**
      * @dev Constructor to initialize the Funding contract with governance and token addresses.
      * @param initialOwner Address of the initial owner of the contract.
      * @param _governautGovernanceAddress Address of the GovernautGovernance contract.
      * @param _token Address of the ERC20 token to be used for contributions.
      */
+
     constructor(address initialOwner, address _governautGovernanceAddress, IERC20 _token) Ownable(initialOwner) {
-        require(_governautGovernanceAddress != address(0), "GovernautGovernance address cannot be 0");
+        if (_governautGovernanceAddress == address(0)) {
+            revert GovernautGovernanceCantBeAddressZero();
+        }
         governautGovernance = IGovernautGovernance(_governautGovernanceAddress);
         token = _token;
     }
@@ -80,18 +94,19 @@ contract Funding is Ownable, ReentrancyGuard {
      * @dev Creates a new grant with the specified details. Only callable by approved proposers.
      * @param projectOwner Address of the project owner.
      * @param goalAmount The funding goal amount for the project.
+     * @notice This function initializes a new grant with a unique ID, registers it, and emits a GrantCreated event.
      */
     function createGrant(address projectOwner, uint256 goalAmount) external onlyApprovedProposer {
         uint256 startTimestamp = block.timestamp;
         uint256 endTimestamp = startTimestamp + 21 days;
-
         grants[grantIdCounter] = FundingGrant({
             projectOwner: projectOwner,
             startTimestamp: startTimestamp,
             endTimestamp: endTimestamp,
             goalAmount: goalAmount,
             totalContributed: 0,
-            isActive: true
+            lastClaimTimestamp: 0,
+            numberOfClaimsMade: 0
         });
 
         emit GrantCreated(grantIdCounter, projectOwner, goalAmount, startTimestamp, endTimestamp);
@@ -102,12 +117,14 @@ contract Funding is Ownable, ReentrancyGuard {
      * @dev Allows users to contribute to a grant with the specified ID and amount.
      * @param grantId The ID of the grant to contribute to.
      * @param amount The amount of tokens to contribute.
+     * @notice Contributions are only accepted if the grant is active. This function updates the grant's total
+     * contributions and records the contributor's amount, then emits a ContributionMade event.
      */
     function contribute(uint256 grantId, uint256 amount) external {
         FundingGrant storage grant = grants[grantId];
-
-        require(grant.isActive, "Grant is not active");
-        require(block.timestamp < grant.endTimestamp, "Grant has ended");
+        if (block.timestamp >= grant.endTimestamp) {
+            revert GrantHasEnded();
+        }
         require(token.transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
         grant.totalContributed += amount;
@@ -119,16 +136,22 @@ contract Funding is Ownable, ReentrancyGuard {
     /**
      * @dev Allows contributors to claim a refund if the grant's goal is not met by the end of the funding period.
      * @param grantId The ID of the grant to claim a refund from.
+     * @notice Refunds are only possible if the grant has ended without meeting its goal. This function resets the
+     * contributor's contribution to zero, transfers the contributed tokens back, and emits a Refunded event.
      */
-    function claimRefund(uint256 grantId) external nonReentrant {
+    function claimContributionRefund(uint256 grantId) external nonReentrant {
         FundingGrant storage grant = grants[grantId];
-
-        require(block.timestamp > grant.endTimestamp, "Grant has not ended");
-        require(grant.totalContributed < grant.goalAmount, "Grant goal not met");
+        if (block.timestamp < grant.endTimestamp) {
+            revert GrantHasNotEnded();
+        }
+        if (grant.totalContributed >= grant.goalAmount) {
+            revert GrantGoalIsMet();
+        }
 
         uint256 contributedAmount = contributionsByUser[grantId][msg.sender];
-        require(contributedAmount > 0, "No contributions to refund");
-
+        if (contributedAmount == 0) {
+            revert NoContributions();
+        }
         contributionsByUser[grantId][msg.sender] = 0;
         require(token.transfer(msg.sender, contributedAmount), "Refund failed");
 
@@ -138,22 +161,51 @@ contract Funding is Ownable, ReentrancyGuard {
     /**
      * @dev Allows the project owner to claim the funds raised if the grant's goal is met.
      * @param grantId The ID of the grant whose funds are to be claimed.
+     * @notice The project owner can claim funds in increments after the grant ends and the goal is met. Claims are
+     * limited to a maximum number and frequency. This function updates the last claim timestamp, increments the number
+     * of claims made, transfers the claim amount to the project owner, and emits a FundsClaimed event.
      */
     function claimFunds(uint256 grantId) external nonReentrant {
         FundingGrant storage grant = grants[grantId];
-
-        require(msg.sender == grant.projectOwner, "Only project owner can claim");
-        require(block.timestamp > grant.endTimestamp, "Grant has not ended");
-        require(grant.totalContributed >= grant.goalAmount, "Grant goal not met");
-
-        uint256 amountToClaim = grant.totalContributed;
-        grant.isActive = false; // Prevent further actions on this grant
+        uint256 timeSinceLastClaim =
+            block.timestamp - (grant.lastClaimTimestamp > 0 ? grant.lastClaimTimestamp : grant.endTimestamp);
+        if (msg.sender != grant.projectOwner) {
+            revert OnlyProjectOwnerCanClaim();
+        }
+        if (block.timestamp < grant.endTimestamp) {
+            revert GrantHasNotEnded();
+        }
+        if (grant.totalContributed < grant.goalAmount) {
+            revert GrantGoalNotMet();
+        }
+        if (grant.numberOfClaimsMade >= 4) {
+            revert AllClaimsClaimed();
+        }
+        if (timeSinceLastClaim < 30 days) {
+            revert NotEnoughTimePassed();
+        }
+        uint256 amountToClaim = grant.totalContributed / 4;
+        grant.lastClaimTimestamp = block.timestamp;
+        grant.numberOfClaimsMade += 1;
 
         require(token.transfer(msg.sender, amountToClaim), "Claim failed");
 
         emit FundsClaimed(grantId, msg.sender, amountToClaim);
     }
 
+    /**
+     * @dev Returns the status of a specific grant.
+     * @param grantId The ID of the grant to query.
+     * @return projectOwner The address of the project owner.
+     * @return startTimestamp The start timestamp of the funding period.
+     * @return endTimestamp The end timestamp of the funding period.
+     * @return goalAmount The funding goal amount.
+     * @return totalContributed The total amount contributed.
+     * @return numberOfClaimsMade The number of claims made by the project owner.
+     * @return lastClaimTimestamp The timestamp of the last claim made.
+     * @notice This view function provides detailed information about a grant's status, including its progress towards
+     * the funding goal and the claims made by the project owner.
+     */
     function getGrantStatus(uint256 grantId)
         external
         view
@@ -163,7 +215,8 @@ contract Funding is Ownable, ReentrancyGuard {
             uint256 endTimestamp,
             uint256 goalAmount,
             uint256 totalContributed,
-            bool isActive
+            uint256 numberOfClaimsMade,
+            uint256 lastClaimTimestamp
         )
     {
         FundingGrant storage grant = grants[grantId];
@@ -173,7 +226,8 @@ contract Funding is Ownable, ReentrancyGuard {
             grant.endTimestamp,
             grant.goalAmount,
             grant.totalContributed,
-            grant.isActive
+            grant.numberOfClaimsMade,
+            grant.lastClaimTimestamp
         );
     }
 }

@@ -14,10 +14,9 @@ import { IdentityManager } from "../Identity Management/IdentityManager.sol";
 /**
  * @title GovernautGovernance
  * @author Governaut
- * @notice This contract implements a governance system using OpenZeppelin's Governor contracts.
- * Manages grants, including submission, reviews, approval, and disbursement processes.
- * It could integrate with Optimism's infrastructure for efficient transaction processing.
- * It integrates with an Identity Manager to verify the identities of those proposing actions.
+ * @dev Implements a governance system leveraging OpenZeppelin's Governor contracts. It is designed to manage proposals
+ * related to grants, including their submission, review, approval, and disbursement. The contract integrates with an
+ * Identity Manager to ensure that only verified identities can propose actions.
  */
 contract GovernautGovernance is
     Governor,
@@ -31,23 +30,33 @@ contract GovernautGovernance is
     ///                                  ERRORS                                ///
     //////////////////////////////////////////////////////////////////////////////
     error IdentityManagerCantBeAddressZero();
+    error UserIsntVerified();
 
     /// @dev Immutable reference to the IdentityManager contract responsible for verifying identities.
     IdentityManager immutable identityManager;
+
+    /// @dev Mapping from proposer address to whether the proposer has been approved.
+    mapping(address => bool) public approvedProposers;
+
+    /// @dev Mapping from proposal ID to proposer address.
+    mapping(uint256 => address) private _proposalIdToProposer;
 
     /// @dev Event emitted when a new proposal is created.
     event ProposalCreated(uint256 indexed proposalId, address indexed proposer, string indexed description);
 
     /// @dev Modifier to ensure that only verified identities can execute certain functions.
     modifier onlyVerifiedIdentity() {
-        require(identityManager.getIsVerified(msg.sender), "Caller must have a verified identity to propose");
+        if (!identityManager.getIsVerified(msg.sender)) {
+            revert UserIsntVerified();
+        }
         _;
     }
 
     /**
-     * @param _token Address of the token used for voting.
-     * @param _identityManagerAddress Address of the Identity Manager contract.
-     * @dev Initializes the Governaut Governance contract with the given parameters.
+     * @dev Sets up the governance contract with necessary settings and initializes the reference to the Identity
+     * Manager.
+     * @param _token The token used for voting.
+     * @param _identityManagerAddress The address of the Identity Manager contract.
      */
     constructor(
         IVotes _token,
@@ -65,15 +74,17 @@ contract GovernautGovernance is
     }
 
     ///////////////////////////////////////////////////////////////////////////////
-    ///                        External Functions                              ///
+    ///                        External/Public Functions                       ///
     //////////////////////////////////////////////////////////////////////////////
     /**
-     * @param targets Array of addresses to which the proposals will be sent.
-     * @param values Array of amounts of tokens to send along with the proposals.
-     * @param calldatas Array of calldata to pass along with the proposals.
-     * @param description Description of the proposal.
-     * @return Proposal ID.
-     * @dev Calls the `_propose` function to create a new proposal.
+     * @notice Creates a new proposal.
+     * @dev Only verified identities can propose. Emits a `ProposalCreated` event upon success.
+     * @param targets The addresses to which the proposals will be sent.
+     * @param values The amounts of tokens to send with the proposals.
+     * @param calldatas The calldata to pass with the proposals.
+     * @param description A description of the proposal.
+     * @param proposer The address of the proposer.
+     * @return proposalId The ID of the newly created proposal.
      */
     function propose(
         address[] memory targets,
@@ -87,7 +98,39 @@ contract GovernautGovernance is
         returns (uint256)
     {
         uint256 proposalId = _propose(targets, values, calldatas, description, proposer);
+        _proposalIdToProposer[proposalId] = proposer;
         emit ProposalCreated(proposalId, proposer, description);
+        return proposalId;
+    }
+
+    /**
+     * @notice Executes a proposal.
+     * @dev Marks the proposer as approved upon successful execution.
+     * @param targets The addresses targeted by the proposal.
+     * @param values The values involved in the proposal.
+     * @param calldatas The calldata to execute with the proposal.
+     * @param descriptionHash A hash of the proposal's description.
+     * @return proposalId The ID of the executed proposal.
+     */
+    function execute(
+        address[] memory targets,
+        uint256[] memory values,
+        bytes[] memory calldatas,
+        bytes32 descriptionHash
+    )
+        public
+        payable
+        override
+        returns (uint256)
+    {
+        // Execute the proposal using the inherited execute logic
+        uint256 proposalId = super.execute(targets, values, calldatas, descriptionHash);
+
+        // Retrieve the proposer's address using the proposal ID
+        address proposer = _proposalIdToProposer[proposalId];
+        // Mark the proposer as approved
+        approvedProposers[proposer] = true;
+
         return proposalId;
     }
 
