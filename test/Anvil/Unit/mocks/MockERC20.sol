@@ -1,77 +1,37 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.24;
+pragma solidity ^0.8.20;
 
-contract MockERC20 {
-  mapping(address => uint256) private _balances;
-  mapping(address => mapping(address => uint256)) private _allowances;
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
 
-  string public name = "Mock Token";
-  string public symbol = "MOCK";
-  uint8 public decimals = 18;
+contract MockERC20 is ERC20, ERC20Permit, ERC20Votes {
+    constructor() ERC20("MyToken", "MTK") ERC20Permit("MyToken") { }
 
-  constructor(uint256 initialSupply) {
-    _mint(msg.sender, initialSupply);
-  }
+    function mint(address to, uint256 amount) public {
+        _mint(to, amount);
+    }
 
-  function balanceOf(address account) public view returns (uint256) {
-    return _balances[account];
-  }
+    function delegate(address delegatee) public override {
+        _delegate(_msgSender(), delegatee);
+    }
 
-  function transfer(address recipient, uint256 amount) public returns (bool) {
-    _transfer(msg.sender, recipient, amount);
-    return true;
-  }
+    function clock() public view override returns (uint48) {
+        return uint48(block.timestamp);
+    }
 
-  function allowance(
-    address owner,
-    address spender
-  ) public view returns (uint256) {
-    return _allowances[owner][spender];
-  }
+    // solhint-disable-next-line func-name-mixedcase
+    function CLOCK_MODE() public pure override returns (string memory) {
+        return "mode=timestamp";
+    }
 
-  function approve(address spender, uint256 amount) public returns (bool) {
-    _approve(msg.sender, spender, amount);
-    return true;
-  }
+    // The following functions are overrides required by Solidity.
 
-  function transferFrom(
-    address sender,
-    address recipient,
-    uint256 amount
-  ) public returns (bool) {
-    require(
-      _allowances[sender][msg.sender] >= amount,
-      "ERC20: transfer amount exceeds allowance"
-    );
-    _transfer(sender, recipient, amount);
-    _approve(sender, msg.sender, _allowances[sender][msg.sender] - amount);
-    return true;
-  }
+    function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Votes) {
+        super._update(from, to, value);
+    }
 
-  function _transfer(
-    address sender,
-    address recipient,
-    uint256 amount
-  ) internal {
-    require(sender != address(0), "ERC20: transfer from the zero address");
-    require(recipient != address(0), "ERC20: transfer to the zero address");
-    require(
-      _balances[sender] >= amount,
-      "ERC20: transfer amount exceeds balance"
-    );
-
-    _balances[sender] -= amount;
-    _balances[recipient] += amount;
-  }
-
-  function _approve(address owner, address spender, uint256 amount) internal {
-    require(owner != address(0), "ERC20: approve from the zero address");
-    require(spender != address(0), "ERC20: approve to the zero address");
-    _allowances[owner][spender] = amount;
-  }
-
-  function _mint(address account, uint256 amount) internal {
-    require(account != address(0), "ERC20: mint to the zero address");
-    _balances[account] += amount;
-  }
+    function nonces(address owner) public view override(ERC20Permit, Nonces) returns (uint256) {
+        return super.nonces(owner);
+    }
 }
