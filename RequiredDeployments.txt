@@ -1,0 +1,4 @@
+Celo Alfajores Testnet or Celo Mainnet
+Celo Dango
+Mode testnet or mainnet
+Metal L2 Mainnet or Testnet

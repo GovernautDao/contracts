@@ -43,3 +43,6 @@ optimism = { key = "${API_KEY_OPTIMISTIC_ETHERSCAN}" }
 mode = { key = "${API_KEY_MODESCAN}" }
 base = { key = "${API_KEY_BASESCAN}" }
 #Add more keys here
+
+[rpc_endpoints]
+metall2 = "${METALL2_TESTNET_RPC_URL}"
