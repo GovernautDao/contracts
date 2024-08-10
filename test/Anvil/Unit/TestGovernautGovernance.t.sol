@@ -20,6 +20,11 @@ contract TestGovernautGovernance is Test {
     address USER_3 = makeAddr("User3");
     address USER_4 = makeAddr("User4");
     address USER_5 = makeAddr("User5");
+    address USER_6 = makeAddr("User6");
+    address USER_7 = makeAddr("User7");
+    address USER_8 = makeAddr("User8");
+    address USER_9 = makeAddr("User9");
+    address USER_10 = makeAddr("User10");
 
     function setUp() public {
         helperConfig = new HelperConfig();
@@ -28,10 +33,15 @@ contract TestGovernautGovernance is Test {
         token = new MockERC20();
         // Mint and distribute tokens to users
         token.mint(USER_1, 1000 * 10 ** 18); // Adjust the amount as needed
-        token.mint(USER_2, 1000 * 10 ** 18);
-        token.mint(USER_3, 1000 * 10 ** 18);
-        token.mint(USER_4, 1000 * 10 ** 18);
-        token.mint(USER_5, 1000 * 10 ** 18);
+        token.mint(USER_2, 10_000 * 10 ** 18);
+        token.mint(USER_3, 10_000 * 10 ** 18);
+        token.mint(USER_4, 10_000 * 10 ** 18);
+        token.mint(USER_5, 10_000 * 10 ** 18);
+        token.mint(USER_6, 10_000 * 10 ** 18);
+        token.mint(USER_7, 10_000 * 10 ** 18);
+        token.mint(USER_8, 10_000 * 10 ** 18);
+        token.mint(USER_9, 10_000 * 10 ** 18);
+        token.mint(USER_10, 10_000 * 10 ** 18);
 
         identityManager = new IdentityManager(
             OWNER,
@@ -58,6 +68,21 @@ contract TestGovernautGovernance is Test {
         vm.stopPrank();
         vm.startPrank(USER_5);
         token.delegate(USER_5);
+        vm.stopPrank();
+        vm.startPrank(USER_6);
+        token.delegate(USER_6);
+        vm.stopPrank();
+        vm.startPrank(USER_7);
+        token.delegate(USER_7);
+        vm.stopPrank();
+        vm.startPrank(USER_8);
+        token.delegate(USER_8);
+        vm.stopPrank();
+        vm.startPrank(USER_9);
+        token.delegate(USER_9);
+        vm.stopPrank();
+        vm.startPrank(USER_10);
+        token.delegate(USER_10);
         vm.stopPrank();
 
         // Advance block timestamp to ensure delegations are active
@@ -146,5 +171,102 @@ contract TestGovernautGovernance is Test {
         // Verify: Check if the approvedProposers mapping is updated correctly
         bool isApproved = governautGovernance.isApprovedProposer(USER_1);
         assertTrue(isApproved, "Proposer should be approved after successful proposal execution.");
+    }
+
+    function testQuorumRequirements() public DelegateVotingPower {
+        // Setup: Create a proposal
+        vm.startPrank(USER_1);
+        identityManager.dumbVerify();
+        uint256 proposalId =
+            governautGovernance.propose(new address[](1), new uint256[](1), new bytes[](1), "Quorum Test");
+        vm.stopPrank();
+
+        // Advance to voting period
+        vm.warp(block.timestamp + governautGovernance.votingDelay() + 1);
+
+        // Have only 2 users vote (assuming this is below quorum)
+        address[] memory voters = new address[](1);
+        voters[0] = USER_1;
+
+        for (uint256 i = 0; i < voters.length; i++) {
+            vm.startPrank(voters[i]);
+            identityManager.dumbVerify();
+            governautGovernance.castVote(proposalId, 1);
+            vm.stopPrank();
+        }
+
+        // Advance to end of voting period
+        vm.warp(block.timestamp + governautGovernance.votingPeriod() + 1);
+
+        // Attempt to execute the proposal
+        vm.expectRevert(); // Expect this to fail due to not meeting quorum
+        governautGovernance.execute(proposalId);
+    }
+
+    function testProposalThreshold() public {
+        // Assuming there's a non-zero proposal threshold
+        uint256 threshold = governautGovernance.proposalThreshold();
+
+        if (threshold > 0) {
+            // Setup: Mint just below the threshold amount to USER_1
+            vm.startPrank(OWNER);
+            token.mint(USER_1, threshold - 1);
+            vm.stopPrank();
+
+            // Attempt to propose with insufficient tokens
+            vm.startPrank(USER_1);
+            identityManager.dumbVerify();
+            vm.expectRevert(); // Expect this to fail due to insufficient tokens
+            governautGovernance.propose(new address[](1), new uint256[](1), new bytes[](1), "Threshold Test");
+            vm.stopPrank();
+        }
+    }
+
+    function testVotingPeriodConstraints() public DelegateVotingPower {
+        // Setup: Create a proposal
+        vm.startPrank(USER_1);
+        identityManager.dumbVerify();
+        uint256 proposalId =
+            governautGovernance.propose(new address[](1), new uint256[](1), new bytes[](1), "Voting Period Test");
+        vm.stopPrank();
+
+        // Attempt to vote before voting delay has passed
+        vm.startPrank(USER_2);
+        identityManager.dumbVerify();
+        vm.expectRevert(); // Expect this to fail as voting hasn't started
+        governautGovernance.castVote(proposalId, 1);
+        vm.stopPrank();
+
+        // Advance past voting period
+        vm.warp(block.timestamp + governautGovernance.votingDelay() + governautGovernance.votingPeriod() + 1);
+
+        // Attempt to vote after voting period has ended
+        vm.startPrank(USER_3);
+        identityManager.dumbVerify();
+        vm.expectRevert(); // Expect this to fail as voting has ended
+        governautGovernance.castVote(proposalId, 1);
+        vm.stopPrank();
+    }
+
+    function testDoubleVoting() public DelegateVotingPower {
+        // Setup: Create a proposal
+        vm.startPrank(USER_1);
+        identityManager.dumbVerify();
+        uint256 proposalId =
+            governautGovernance.propose(new address[](1), new uint256[](1), new bytes[](1), "Double Voting Test");
+        vm.stopPrank();
+
+        // Advance to voting period
+        vm.warp(block.timestamp + governautGovernance.votingDelay() + 1);
+
+        // Vote once
+        vm.startPrank(USER_2);
+        identityManager.dumbVerify();
+        governautGovernance.castVote(proposalId, 1);
+
+        // Attempt to vote again
+        vm.expectRevert(); // Expect this to fail as USER_2 has already voted
+        governautGovernance.castVote(proposalId, 1);
+        vm.stopPrank();
     }
 }
