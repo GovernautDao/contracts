@@ -83,7 +83,7 @@ contract Funding is Ownable, ReentrancyGuard {
 
   /// @dev Modifier to check if the caller is an approved proposer
   modifier onlyApprovedProposer() {
-    if (!governance.isProposerApproved(msg.sender)) {
+    if (!governance.isApprovedProposer(msg.sender)) {
       revert UserIsntAnApprovedProposer();
     }
     _;
