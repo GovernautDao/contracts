@@ -46,7 +46,7 @@ contract Funding is Ownable, ReentrancyGuard {
   }
 
   /// @dev Counter to assign unique IDs to each grant
-  uint256 private grantIdCounter = 0;
+  uint256 internal grantIdCounter;
 
   /// @dev Mapping from grant ID to FundingGrant struct
   mapping(uint256 => FundingGrant) private grants;
@@ -106,17 +106,30 @@ contract Funding is Ownable, ReentrancyGuard {
 
     governance = IGovernaut(_governautAddress);
     token = IERC20(_token);
+    grantIdCounter = 0;
+    grants[grantIdCounter] = FundingGrant({
+      projectOwner: address(0),
+      startTimestamp: 0,
+      endTimestamp: 0,
+      goalAmount: 0,
+      totalContributed: 0,
+      lastClaimTimestamp: 0,
+      numberOfClaimsMade: 0
+    });
   }
 
   /**
    * @dev Creates a new grant with the specified details. Only callable by approved proposers.
+   * @dev One approved user can have multiple grants, provided one approved proposal points to only one grant.
    * @param projectOwner Address of the project owner.
    * @param goalAmount The funding goal amount for the project.
+   * @return grantIdCounter Id of the vault just created.
    */
   function createGrant(
     address projectOwner,
     uint256 goalAmount
-  ) external onlyApprovedProposer {
+  ) external onlyApprovedProposer returns (uint256) {
+    grantIdCounter++;
     uint256 startTimestamp = block.timestamp;
     uint256 endTimestamp = startTimestamp + 21 days;
     grants[grantIdCounter] = FundingGrant({
@@ -136,7 +149,7 @@ contract Funding is Ownable, ReentrancyGuard {
       startTimestamp,
       endTimestamp
     );
-    grantIdCounter++;
+    return grantIdCounter;
   }
 
   /**
@@ -167,8 +180,11 @@ contract Funding is Ownable, ReentrancyGuard {
    * @param grantId The ID of the grant to claim a refund from.
    * @notice Refunds are only possible if the grant has ended without meeting its goal. This function resets the
    * contributor's contribution to zero, transfers the contributed tokens back, and emits a Refunded event.
+   * @return Claimed amount.
    */
-  function claimContributionRefund(uint256 grantId) external nonReentrant {
+  function claimContributionRefund(
+    uint256 grantId
+  ) external nonReentrant returns (uint256) {
     FundingGrant storage grant = grants[grantId];
     if (block.timestamp < grant.endTimestamp) {
       revert GrantHasNotEnded();
@@ -185,6 +201,7 @@ contract Funding is Ownable, ReentrancyGuard {
     require(token.transfer(msg.sender, contributedAmount), "Refund failed");
 
     emit Refunded(msg.sender, grantId, contributedAmount);
+    return contributedAmount;
   }
 
   /**
@@ -193,8 +210,9 @@ contract Funding is Ownable, ReentrancyGuard {
    * @notice The project owner can claim funds in increments after the grant ends and the goal is met. Claims are
    * limited to a maximum number and frequency. This function updates the last claim timestamp, increments the number
    * of claims made, transfers the claim amount to the project owner, and emits a FundsClaimed event.
+   * @return uint256 amount claimed.
    */
-  function claimFunds(uint256 grantId) external nonReentrant {
+  function claimFunds(uint256 grantId) external nonReentrant returns (uint256) {
     FundingGrant storage grant = grants[grantId];
     uint256 timeSinceLastClaim = block.timestamp -
       (
@@ -224,6 +242,7 @@ contract Funding is Ownable, ReentrancyGuard {
     require(token.transfer(msg.sender, amountToClaim), "Claim failed");
 
     emit FundsClaimed(grantId, msg.sender, amountToClaim);
+    return amountToClaim;
   }
 
   /**
@@ -265,4 +284,16 @@ contract Funding is Ownable, ReentrancyGuard {
       grant.lastClaimTimestamp
     );
   }
+
+  /**
+   * @notice Getter for contribution amount for msg.sender.
+   * @param grantId Id of the grant to get contribution status.
+   * @return uint256 Contributed amount.
+   */
+  function getContributionStatus(
+    uint256 grantId
+  ) external view returns (uint256) {
+    return contributionsByUser[grantId][msg.sender];
+  }
 }
+// what if user has contributed extra funds than the grant goal
