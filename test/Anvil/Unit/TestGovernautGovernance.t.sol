@@ -149,10 +149,17 @@ contract TestGovernautGovernance is Test {
             // period
 
         // Simulation of other users voting to meet quorum
-        address[] memory users = new address[](3);
+        address[] memory users = new address[](10);
         users[0] = USER_1;
         users[1] = USER_2;
         users[2] = USER_3;
+        users[3] = USER_4;
+        users[4] = USER_5;
+        users[5] = USER_6;
+        users[6] = USER_7;
+        users[7] = USER_8;
+        users[8] = USER_9;
+        users[9] = USER_10;
 
         for (uint256 i = 0; i < users.length; i++) {
             vm.startPrank(users[i]);
