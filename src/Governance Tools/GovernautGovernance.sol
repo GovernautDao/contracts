@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.24;
 
-import { Governor } from "@openzeppelin/contracts/governance/Governor.sol";
-import { GovernorSettings } from "@openzeppelin/contracts/governance/extensions/GovernorSettings.sol";
-import { GovernorCountingSimple } from "@openzeppelin/contracts/governance/extensions/GovernorCountingSimple.sol";
-import { GovernorStorage } from "@openzeppelin/contracts/governance/extensions/GovernorStorage.sol";
-import { GovernorVotes } from "@openzeppelin/contracts/governance/extensions/GovernorVotes.sol";
-import { IVotes } from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import { GovernorVotesQuorumFraction } from
-    "@openzeppelin/contracts/governance/extensions/GovernorVotesQuorumFraction.sol";
+import "@openzeppelin/contracts-upgradeable/governance/GovernorUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorSettingsUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorCountingSimpleUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorStorageUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorVotesUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/governance/extensions/GovernorVotesQuorumFractionUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { IdentityManager } from "../Identity Management/IdentityManager.sol";
 
 /**
@@ -19,12 +18,13 @@ import { IdentityManager } from "../Identity Management/IdentityManager.sol";
  * to ensure only verified identities can participate in governance actions.
  */
 contract GovernautGovernance is
-    Governor,
-    GovernorSettings,
-    GovernorCountingSimple,
-    GovernorStorage,
-    GovernorVotes,
-    GovernorVotesQuorumFraction
+    Initializable,
+    GovernorUpgradeable,
+    GovernorSettingsUpgradeable,
+    GovernorCountingSimpleUpgradeable,
+    GovernorStorageUpgradeable,
+    GovernorVotesUpgradeable,
+    GovernorVotesQuorumFractionUpgradeable
 {
     ///////////////////////////////////////////////////////////////////////////////
     ///                                  ERRORS                                ///
@@ -33,7 +33,7 @@ contract GovernautGovernance is
     error IdentityManagerCantBeAddressZero();
 
     /// @dev Immutable reference to the IdentityManager contract responsible for verifying identities.
-    IdentityManager immutable identityManager;
+    IdentityManager identityManager;
 
     // @dev Mapping of approved proposals
     mapping(address => bool) public approvedProposers;
@@ -49,21 +49,18 @@ contract GovernautGovernance is
         _;
     }
 
-    /**
-     * @notice Constructor to initialize the GovernautGovernance contract
-     * @dev Sets up the governance settings and links to the Identity Manager
-     * @param _token The ERC20 token used for voting power (Ex: OP token on Optimism Network)
-     * @param _identityManagerAddress The address of the Identity Manager contract
-     */
-    constructor(
-        IVotes _token,
-        address _identityManagerAddress
-    )
-        Governor("Governaut")
-        GovernorSettings(1 days, 3 weeks, 0)
-        GovernorVotes(_token)
-        GovernorVotesQuorumFraction(4) // suggested by openzeppelin
-    {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(IVotes _token, address _identityManagerAddress) public initializer {
+        __Governor_init("Governaut");
+        __GovernorSettings_init(1 days, 3 weeks, 0);
+        __GovernorCountingSimple_init();
+        __GovernorVotes_init(_token);
+        __GovernorVotesQuorumFraction_init(4);
+
         if (_identityManagerAddress == address(0)) {
             revert IdentityManagerCantBeAddressZero();
         }
@@ -89,7 +86,7 @@ contract GovernautGovernance is
         string memory description
     )
         public
-        override(Governor)
+        override(GovernorUpgradeable)
         onlyVerifiedIdentity
         returns (uint256)
     {
@@ -114,7 +111,7 @@ contract GovernautGovernance is
         public
         payable
         virtual
-        override(Governor)
+        override(GovernorUpgradeable)
         returns (uint256)
     {
         uint256 proposalId = hashProposal(targets, values, calldatas, descriptionHash);
@@ -149,7 +146,7 @@ contract GovernautGovernance is
     )
         public
         virtual
-        override(Governor)
+        override(GovernorUpgradeable)
         onlyVerifiedIdentity
         returns (uint256)
     {
@@ -163,7 +160,7 @@ contract GovernautGovernance is
      * @notice Gets the voting delay
      * @return uint256 The number of blocks between proposal creation and voting start
      */
-    function votingDelay() public view override(Governor, GovernorSettings) returns (uint256) {
+    function votingDelay() public view override(GovernorUpgradeable, GovernorSettingsUpgradeable) returns (uint256) {
         return super.votingDelay();
     }
 
@@ -171,7 +168,7 @@ contract GovernautGovernance is
      * @notice Gets the voting period
      * @return uint256 The number of blocks for which voting is open
      */
-    function votingPeriod() public view override(Governor, GovernorSettings) returns (uint256) {
+    function votingPeriod() public view override(GovernorUpgradeable, GovernorSettingsUpgradeable) returns (uint256) {
         return super.votingPeriod();
     }
 
@@ -183,7 +180,7 @@ contract GovernautGovernance is
     function quorum(uint256 blockNumber)
         public
         view
-        override(Governor, GovernorVotesQuorumFraction)
+        override(GovernorUpgradeable, GovernorVotesQuorumFractionUpgradeable)
         returns (uint256)
     {
         return super.quorum(blockNumber);
@@ -193,7 +190,12 @@ contract GovernautGovernance is
      * @notice Gets the proposal threshold
      * @return uint256 The minimum number of votes an account must have to create a proposal
      */
-    function proposalThreshold() public view override(Governor, GovernorSettings) returns (uint256) {
+    function proposalThreshold()
+        public
+        view
+        override(GovernorUpgradeable, GovernorSettingsUpgradeable)
+        returns (uint256)
+    {
         return super.proposalThreshold();
     }
 
@@ -215,7 +217,7 @@ contract GovernautGovernance is
         address proposer
     )
         internal
-        override(Governor, GovernorStorage)
+        override(GovernorUpgradeable, GovernorStorageUpgradeable)
         returns (uint256)
     {
         return super._propose(targets, values, calldatas, description, proposer);
