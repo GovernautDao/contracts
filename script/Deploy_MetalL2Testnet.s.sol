@@ -23,13 +23,11 @@ contract MyScript is Script {
     helperConfig = new HelperConfig();
     address governancetoken = helperConfig
       .getOpSepoliaConfig()
-      ._governanceTokenForThatChain;
+      ._governanceToken;
     console.log(governancetoken);
     vm.startBroadcast(deployerPrivateKey);
 
-    // Deploy the IdentityManager contract first
     identitymanager = new IdentityManager(
-      vm.addr(deployerPrivateKey),
       helperConfig.getOpSepoliaConfig()._WorldcoinRouterAddress,
       helperConfig.getOpSepoliaConfig()._appid,
       helperConfig.getOpSepoliaConfig()._actionId
@@ -37,34 +35,13 @@ contract MyScript is Script {
 
     console.log("Identity Manager Address :", address(identitymanager));
 
-    // Deploy the implementation contract
-    GovernautGovernance implementation = new GovernautGovernance();
-
-    // Deploy the ProxyAdmin
-    ProxyAdmin proxyAdmin = new ProxyAdmin(
-      0xfe63Ba8189215E5C975e73643b96066B6aD41A45
-    );
-
-    // Prepare initialization data for GovernautGovernance with the correct IdentityManager address
-    bytes memory initData = abi.encodeWithSelector(
-      GovernautGovernance.initialize.selector,
+    governance = new GovernautGovernance(
       IVotes(governancetoken),
       address(identitymanager)
     );
 
-    // Deploy the TransparentUpgradeableProxy with the correct initialization data
-    TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-      address(implementation),
-      address(proxyAdmin),
-      initData
-    );
-
-    // Treat the proxy as the GovernautGovernance contract
-    governance = GovernautGovernance(payable(address(proxy)));
-
     console.log("Governaut Governance Address :", address(governance));
 
-    // Deploy the Funding contract
     funding = new Funding(
       vm.addr(deployerPrivateKey),
       address(governance),

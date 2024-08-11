@@ -1,78 +1,62 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity 0.8.24;
 
 import {console} from "forge-std/console.sol";
 import "forge-std/Script.sol";
 import "../src/Governance Tools/GovernautGovernance.sol";
 import "../src/Identity Management/IdentityManager.sol";
-import "../src/Onchain Funding/Funding.sol";
+import "../src/Governance Tools/GovernanceToken.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {HelperConfig} from "../script/HelperConfig.s.sol";
+import {HelperConfig} from "./HelperConfig.s.sol";
+import {Funding} from "../src/Onchain Funding//Funding.sol";
 
-contract MyScript is Script {
+contract DeployContracts is Script {
   HelperConfig helperConfig;
-  IdentityManager identitymanager;
-  Funding funding;
+  IdentityManager identityManager;
   GovernautGovernance governance;
+  GovernanceToken governanceToken;
+  Funding funding;
 
   function run() external {
     uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+    address deployer = vm.addr(deployerPrivateKey);
     helperConfig = new HelperConfig();
-    address governancetoken = helperConfig
-      .getOpSepoliaConfig()
-      ._governanceTokenForThatChain;
-    console.log(governancetoken);
+
+    console.log("Deploying contracts...");
+
     vm.startBroadcast(deployerPrivateKey);
 
-    // Deploy the IdentityManager contract first
-    identitymanager = new IdentityManager(
-      vm.addr(deployerPrivateKey),
-      helperConfig.getOpSepoliaConfig()._WorldcoinRouterAddress,
-      helperConfig.getOpSepoliaConfig()._appid,
-      helperConfig.getOpSepoliaConfig()._actionId
+    // Deploy GovernanceToken
+    governanceToken = new GovernanceToken(deployer, 1_000_000 * 10 ** 18); // 1 million tokens with 18 decimals
+    console.log("GovernanceToken deployed at:", address(governanceToken));
+
+    // Deploy IdentityManager
+    HelperConfig.Config memory config = helperConfig.getBaseSepoliaConfig(); // Or use the appropriate network
+    // config
+    identityManager = new IdentityManager(
+      config._WorldcoinRouterAddress,
+      config._appid,
+      config._actionId
     );
+    console.log("IdentityManager deployed at:", address(identityManager));
 
-    console.log("Identity Manager Address :", address(identitymanager));
-
-    // Deploy the implementation contract
-    GovernautGovernance implementation = new GovernautGovernance();
-
-    // Deploy the ProxyAdmin
-    ProxyAdmin proxyAdmin = new ProxyAdmin(
-      0xfe63Ba8189215E5C975e73643b96066B6aD41A45
+    // Deploy GovernautGovernance
+    governance = new GovernautGovernance(
+      IVotes(address(governanceToken)),
+      address(identityManager)
     );
+    console.log("GovernautGovernance deployed at:", address(governance));
 
-    // Prepare initialization data for GovernautGovernance with the correct IdentityManager address
-    bytes memory initData = abi.encodeWithSelector(
-      GovernautGovernance.initialize.selector,
-      IVotes(governancetoken),
-      address(identitymanager)
-    );
-
-    // Deploy the TransparentUpgradeableProxy with the correct initialization data
-    TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-      address(implementation),
-      address(proxyAdmin),
-      initData
-    );
-
-    // Treat the proxy as the GovernautGovernance contract
-    governance = GovernautGovernance(payable(address(proxy)));
-
-    console.log("Governaut Governance Address :", address(governance));
-
-    // Deploy the Funding contract
+    // Deploy Funding
     funding = new Funding(
       vm.addr(deployerPrivateKey),
       address(governance),
-      governancetoken
+      address(governanceToken)
     );
-
-    console.log("Funding Address :", address(funding));
+    console.log("Funding deployed at:", address(funding));
 
     vm.stopBroadcast();
+
+    console.log("All contracts deployed successfully.");
   }
 }
