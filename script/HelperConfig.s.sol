@@ -6,8 +6,8 @@ import { console } from "forge-std/Test.sol";
 import { WorldIDIdentityManagerRouterMock } from "../test/Anvil/Unit/mocks/WorldIDIdentityManagerRouterMock.sol";
 
 contract HelperConfig is Script {
-    string appId = vm.envString("WORLDCOIN_APP_ID");
-    string actionId = vm.envString("WORLDCOIN_ACTION_ID");
+    string appId = "app_staging_6c8d4488699bc14d8d580282ac02b9d5";
+    string actionId = "testing-verfication-action";
 
     struct Config {
         string _appid;
@@ -15,56 +15,56 @@ contract HelperConfig is Script {
         address _WorldcoinRouterAddress;
     }
 
-    function getOpMainnetConfig() public view returns (Config memory) {
-        Config memory OpMainnetConfig = Config({
-            _appid: appId,
-            _actionId: actionId,
-            _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_OP_MAINNET")
-        });
-        return OpMainnetConfig;
-    }
+    // function getOpMainnetConfig() public view returns (Config memory) {
+    //     Config memory OpMainnetConfig = Config({
+    //         _appid: appId,
+    //         _actionId: actionId,
+    //         _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_OP_MAINNET")
+    //     });
+    //     return OpMainnetConfig;
+    // }
 
-    function getMetalL2TestnetConfig() public view returns (Config memory) {
-        Config memory MetalL2Config = Config({
-            _appid: appId,
-            _actionId: actionId,
-            _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_OP_SEPOLIA")
-        });
-        return MetalL2Config;
-    }
+    // function getMetalL2TestnetConfig() public view returns (Config memory) {
+    //     Config memory MetalL2Config = Config({
+    //         _appid: appId,
+    //         _actionId: actionId,
+    //         _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_OP_SEPOLIA")
+    //     });
+    //     return MetalL2Config;
+    // }
 
     function getOpSepoliaConfig() public view returns (Config memory) {
         Config memory OpSepoliaConfig = Config({
             _appid: appId,
             _actionId: actionId,
-            _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_OP_SEPOLIA")
+            _WorldcoinRouterAddress: 0x11cA3127182f7583EfC416a8771BD4d11Fae4334
         });
         return OpSepoliaConfig;
     }
 
-    function getEthMainnetConfig() public view returns (Config memory) {
-        Config memory EthMainnetConfig = Config({
-            _appid: appId,
-            _actionId: actionId,
-            _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_ETH_MAINNET")
-        });
-        return EthMainnetConfig;
-    }
+    // function getEthMainnetConfig() public view returns (Config memory) {
+    //     Config memory EthMainnetConfig = Config({
+    //         _appid: appId,
+    //         _actionId: actionId,
+    //         _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_ETH_MAINNET")
+    //     });
+    //     return EthMainnetConfig;
+    // }
 
-    function getEthSepoliaConfig() public view returns (Config memory) {
-        Config memory EthSepoliaConfig = Config({
-            _appid: appId,
-            _actionId: actionId,
-            _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_ETH_SEPOLIA")
-        });
-        return EthSepoliaConfig;
-    }
+    // function getEthSepoliaConfig() public view returns (Config memory) {
+    //     Config memory EthSepoliaConfig = Config({
+    //         _appid: appId,
+    //         _actionId: actionId,
+    //         _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_ETH_SEPOLIA")
+    //     });
+    //     return EthSepoliaConfig;
+    // }
 
     function getBaseSepoliaConfig() public view returns (Config memory) {
         Config memory BaseSepoliaConfig = Config({
             _appid: appId,
             _actionId: actionId,
-            _WorldcoinRouterAddress: vm.envAddress("WORLDCOIN_ROUTERADDRESS_BASE_SEPOLI")
+            _WorldcoinRouterAddress: 0x42FF98C4E85212a5D31358ACbFe76a621b50fC02
         });
         return BaseSepoliaConfig;
     }
