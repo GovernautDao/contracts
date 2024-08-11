@@ -7,7 +7,6 @@ import "../src/Governance Tools/GovernautGovernance.sol";
 import "../src/Identity Management/IdentityManager.sol";
 import "../src/Onchain Funding/Funding.sol";
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import {HelperConfig} from "../script/HelperConfig.s.sol";
