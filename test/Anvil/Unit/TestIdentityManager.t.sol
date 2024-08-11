@@ -15,7 +15,6 @@ contract TestIdentityManager is Test {
     function setUp() public {
         helperConfig = new HelperConfig();
         identityManager = new IdentityManager(
-            OWNER,
             helperConfig.getAnvilConfig()._WorldcoinRouterAddress,
             helperConfig.getAnvilConfig()._appid,
             helperConfig.getAnvilConfig()._actionId

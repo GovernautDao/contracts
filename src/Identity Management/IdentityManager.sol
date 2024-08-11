@@ -7,11 +7,10 @@ pragma solidity 0.8.24;
  * @notice Contract will handle identity verification using World ID on #Superchain.
  * It will store mappings of user addresses to unique identifiers provided by World ID, ensuring privacy and security.
  */
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { ByteHasher } from "./helpers/ByteHasher.sol";
 import { IWorldID } from "./interfaces/IWorldID.sol";
 
-contract IdentityManager is Ownable {
+contract IdentityManager {
     using ByteHasher for bytes;
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -44,14 +43,7 @@ contract IdentityManager is Ownable {
     /// @param _worldId The WorldID router that will verify the proofs
     /// @param _appId The World ID app ID
     /// @param _actionId The World ID action ID
-    constructor(
-        address initialOwner,
-        address _worldId,
-        string memory _appId,
-        string memory _actionId
-    )
-        Ownable(initialOwner)
-    {
+    constructor(address _worldId, string memory _appId, string memory _actionId) {
         worldId = IWorldID(_worldId);
         externalNullifier = abi.encodePacked(abi.encodePacked(_appId).hashToField(), _actionId).hashToField();
     }
