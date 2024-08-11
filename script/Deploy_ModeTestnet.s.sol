@@ -1,50 +1,62 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.15;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.24;
 
-/// @dev Demo deployments
-import {Script} from "forge-std/Script.sol";
-import {OpStateBridge} from "World Id Bridge/src/OpStateBridge.sol";
-import {OpWorldID} from "World Id Bridge/src/OpWorldId.sol";
 import {console} from "forge-std/console.sol";
+import "forge-std/Script.sol";
+import "../src/Governance Tools/GovernautGovernance.sol";
+import "../src/Identity Management/IdentityManager.sol";
+import "../src/Governance Tools/GovernanceToken.sol";
+import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
+import {HelperConfig} from "./HelperConfig.s.sol";
+import {Funding} from "../src/Onchain Funding//Funding.sol";
 
-/// @title Optimism State Bridge deployment script
-/// @notice forge script to deploy StateBridge.sol on Optimism
-/// @author Worldcoin
-/// @dev Can be executed by running `make mock`, `make local-mock`, `make deploy` or `make deploy-testnet`.
-contract DeployOpStateBridgeGoerli is Script {
-  OpStateBridge public bridge;
-  OpWorldID public opWorld;
+contract DeployContracts is Script {
+  HelperConfig helperConfig;
+  IdentityManager identityManager;
+  GovernautGovernance governance;
+  GovernanceToken governanceToken;
+  Funding funding;
 
-  address public opWorldIDAddress;
-  address public worldIDIdentityManagerAddress;
-  address public opCrossDomainMessengerAddress;
+  function run() external {
+    uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+    address deployer = vm.addr(deployerPrivateKey);
+    helperConfig = new HelperConfig();
 
-  function setUp() public {
-    ///////////////////////////////////////////////////////////////////
-    ///                           OPTIMISM                          ///
-    ///////////////////////////////////////////////////////////////////
-    opCrossDomainMessengerAddress = address(
-      0x5086d1eEF304eb5284A0f6720f79403b4e9bE294
+    console.log("Deploying contracts...");
+
+    vm.startBroadcast(deployerPrivateKey);
+
+    // Deploy GovernanceToken
+    governanceToken = new GovernanceToken(deployer, 1_000_000 * 10 ** 18); // 1 million tokens with 18 decimals
+    console.log("GovernanceToken deployed at:", address(governanceToken));
+
+    // Deploy IdentityManager
+    HelperConfig.Config memory config = helperConfig.getBaseSepoliaConfig(); // Or use the appropriate network
+    // config
+    identityManager = new IdentityManager(
+      0xe95f2fCF682712CAf5fB44C9608d33dbac6B536B,
+      config._appid,
+      config._actionId
     );
+    console.log("IdentityManager deployed at:", address(identityManager));
 
-    ///////////////////////////////////////////////////////////////////
-    ///                           WORLD ID                          ///
-    ///////////////////////////////////////////////////////////////////
-    worldIDIdentityManagerAddress = 0x11cA3127182f7583EfC416a8771BD4d11Fae4334;
-  }
-
-  function run() public {
-    vm.startBroadcast(vm.envUint("PRIVATE_KEY"));
-    opWorld = new OpWorldID(30);
-    opWorldIDAddress = address(opWorld);
-
-    bridge = new OpStateBridge(
-      worldIDIdentityManagerAddress,
-      opWorldIDAddress,
-      opCrossDomainMessengerAddress
+    // Deploy GovernautGovernance
+    governance = new GovernautGovernance(
+      IVotes(address(governanceToken)),
+      address(identityManager)
     );
-    console.log("op world id address", address(opWorld));
+    console.log("GovernautGovernance deployed at:", address(governance));
+
+    // Deploy Funding
+    funding = new Funding(
+      vm.addr(deployerPrivateKey),
+      address(governance),
+      address(governanceToken)
+    );
+    console.log("Funding deployed at:", address(funding));
 
     vm.stopBroadcast();
+
+    console.log("All contracts deployed successfully.");
   }
 }
