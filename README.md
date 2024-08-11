@@ -140,15 +140,46 @@ function isApprovedProposer(address proposer) public view returns (bool)
 
 Checks if an address has been marked as an approved proposer after successfully executing a proposal.
 
+### Contract 2: Identity Manager
+
+#### Description
+
+The `Identity Manager` contract is a contract that integrates with worldcoin to verify proofs on chain. Only Orb level verification is supported. Users do not directly call this contract but the governance contract calls this contract to verify that a user is authenticated or not.
+
+### Key Features
+
+- Identity Verification: Utilizes a Identity Manager to verify the identity of participants, ensuring that only verified users can create proposals and cast votes.
+- Bridges for interacting with identity manager are added for  Mode testnet and Metal l2 and are verified using blockscout
+
+### Functions Overview
+veriifyProof() verifies the user onchain.
+
+### Contract 3: Funding
+
+#### Description
+
+This funding contract is designed to facilitate the creation and management of grants within a decentralized governance framework. It operates in conjunction with the Governaut governance contracts, ensuring that grants are only created if the user has received sufficient approval votes.
+
+
+
+### Key Features
+
+Grant Creation:
+Project owners can create grants to seek funding for their projects. These grants are subject to approval by the Governaut governance system, ensuring community oversight.
+Goal-Driven Funding:
+Each grant has a specific funding goal. Once this goal is met, the project owner can withdraw the funds to execute their project.
+Refund Mechanism:
+If a grant does not reach its funding goal within a specified period, contributors can claim a refund of their contributions, ensuring that funds are only used for successful projects.
+
+
 ### Security Considerations
 
-- Identity Verification: Ensures that only verified users can participate in governance actions, mitigating risks associated with anonymous participation.
-- Access Control: Utilizes modifiers to restrict certain functions to verified identities, enhancing security and integrity of the governance process.
+- Identity Verification: Ensures that only approved users can participate in creating grants, mitigating risks associated with anonymous participation.
+- Access Control: Utilizes modifiers to restrict certain functions to approved identities, enhancing security and integrity of the funding process.
 
 ### Recap
 
-The GovernautGovernance contract represents a robust framework for decentralized decision-making within the Governaut ecosystem. By integrating identity verification and leveraging OpenZeppelin's battle-tested governance modules, it facilitates secure, transparent, and community-driven governance processes.
-
+The Funding contract represents a robust framework for creating crowd funding grants and managing assets.
 ## License
 
 Distributed under the MIT License.
